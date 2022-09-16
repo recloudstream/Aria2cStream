@@ -1,5 +1,6 @@
 package com.lagradost.fetchbutton
 
+/*
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import com.tonyodev.fetch2.DefaultFetchNotificationManager
@@ -25,6 +26,7 @@ fun initFetch(context: Context): Fetch {
  * getSubtitleText: "$progressPercentage % - $timeLeft"
  * updateNotification: Add to builder to get a proper notification
  * */
+
 open class EasierFetchNotificationManager(
     private val context: Context,
 ) :
@@ -69,4 +71,4 @@ open class EasierFetchNotificationManager(
         super.cancelNotification(notificationId)
         globalFetch?.remove(notificationId)
     }
-}
+}*/

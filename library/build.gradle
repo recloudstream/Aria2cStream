@@ -24,10 +24,11 @@ repositories {
 }
 
 dependencies {
-    // Networking
-    api "androidx.tonyodev.fetch2:xfetch2:3.1.6"
-    api "androidx.tonyodev.fetch2okhttp:xfetch2okhttp:3.1.6"
-//    implementation 'com.github.Blatzar:NiceHttp:0.3.0'
+    implementation 'com.github.bumptech.glide:okhttp3-integration:4.13.0'
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1"
+    implementation 'androidx.core:core-ktx:1.8.0'
+
+    // implementation 'com.github.Blatzar:NiceHttp:0.3.0'
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.5.0"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.5.0"
 

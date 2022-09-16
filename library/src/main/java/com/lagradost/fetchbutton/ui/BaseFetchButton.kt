@@ -6,21 +6,15 @@ import android.widget.FrameLayout
 import androidx.annotation.LayoutRes
 import androidx.core.widget.ContentLoadingProgressBar
 import androidx.lifecycle.findViewTreeLifecycleOwner
-import com.lagradost.fetchbutton.DownloadListener
-import com.lagradost.fetchbutton.globalFetch
-import com.tonyodev.fetch2.Download
-import com.tonyodev.fetch2.FetchListener
-import com.tonyodev.fetch2.Request
-import com.tonyodev.fetch2.Status
+import com.lagradost.fetchbutton.aria2c.AbstractClient
+import com.lagradost.fetchbutton.aria2c.Aria2Starter
+import com.lagradost.fetchbutton.aria2c.UriRequest
 
 abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     FrameLayout(context, attributeSet) {
 
     lateinit var progressBar: ContentLoadingProgressBar
-    abstract var fetchListener: FetchListener
-
-    var currentRequestId: Int? = null
-    var currentStatus: Status? = null
+    var gid: String? = null
 
     fun inflate(@LayoutRes layout: Int) {
         inflate(context, layout, this)
@@ -39,29 +33,28 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         // Always listens to downloads
-        observeAllDownloads(::updateViewOnDownloadWithChecks)
+        observeStatusUpdate(::updateViewOnDownloadWithChecks)
     }
 
     /**
      * Safer internal updateViewOnDownload
      * */
-    private fun updateViewOnDownloadWithChecks(download: Download) {
-        if (download.id == currentRequestId) {
-            updateViewOnDownload(download)
-        }
+    private fun updateViewOnDownloadWithChecks(updateCount: Int) {
+        val info = AbstractClient.DownloadListener.getInfo(gid ?: return)
+        updateViewOnDownload(info)
     }
 
     /**
      * No checks required. Arg will always include a download with current id
      * */
-    abstract fun updateViewOnDownload(download: Download)
+    abstract fun updateViewOnDownload(status: ArrayList<AbstractClient.JsonTell>)
 
     /**
      * Look at all global downloads, used to subscribe to one of them.
      * */
-    private fun observeAllDownloads(observer: (Download) -> Unit) {
+    private fun observeStatusUpdate(observer: (Int) -> Unit) {
         this.findViewTreeLifecycleOwner()?.let {
-            DownloadListener.observe(it, observer)
+            AbstractClient.DownloadListener.observe(it, observer)
         }
     }
 
@@ -70,30 +63,35 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
      * */
     abstract fun resetView()
 
-    open fun performDownload(request: Request) {
+    open fun performDownload(request: UriRequest) {
         resetView()
-
-        currentRequestId = request.id
-
-        globalFetch?.enqueue(request, {}, { println("Failed download: $it") })
-            ?.addListener(fetchListener)
+        Aria2Starter.client?.download(request) {
+            gid = it
+            println("GID====$gid")
+        }
     }
 
     fun pauseDownload() {
-        currentRequestId?.let { id ->
-            globalFetch?.pause(id)
+        val localGid = gid ?: return
+        Aria2Starter.client?.run {
+            pause(localGid)
+            forceUpdate()
         }
     }
 
     fun resumeDownload() {
-        currentRequestId?.let { id ->
-            globalFetch?.resume(id)
+        val localGid = gid ?: return
+        Aria2Starter.client?.run {
+            unpause(localGid)
+            forceUpdate()
         }
     }
 
     fun cancelDownload() {
-        currentRequestId?.let { id ->
-            globalFetch?.cancel(id)
+        val localGid = gid ?: return
+        Aria2Starter.client?.run {
+            remove(localGid)
+            forceUpdate()
         }
     }
 }
