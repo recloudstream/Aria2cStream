@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
 
         val path = this.filesDir.path + "/FetchButtonTest/test.bin"
 
+        downloadButton.setPersistentId(1)
         downloadButton.setDefaultClickListener {
             newUriRequest(
                 "https://speed.hetzner.de/100MB.bin", "Hello World",

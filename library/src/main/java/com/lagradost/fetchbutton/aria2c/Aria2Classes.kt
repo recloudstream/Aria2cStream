@@ -94,7 +94,6 @@ fun newUriRequest(
     headers: Map<String, String> = emptyMap(),
     userAgent: String? = null,
     seed: Boolean = false,
-    continueDownload: Boolean? = true,
 ): UriRequest {
     return UriRequest(
         uris = listOf(uri),
@@ -102,7 +101,6 @@ fun newUriRequest(
         headers = headers,
         directory = directory,
         userAgent = userAgent,
-        continueDownload = continueDownload,
         seedTime = if (seed) null else 0.0f
     )
 }

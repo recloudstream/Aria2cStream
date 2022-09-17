@@ -22,7 +22,6 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     private lateinit var statusView: ImageView
 
     private var currentStatus: DownloadStatusTell? = null
-    private var isZeroBytes: Boolean = true
 
     override fun init() {
         inflate(R.layout.download_button_view)
@@ -40,10 +39,10 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
                     performDownload(request)
                 }
                 DownloadStatusTell.Paused -> {
-                    this.resumeDownload()
+                    resumeDownload()
                 }
                 DownloadStatusTell.Active -> {
-                    this.pauseDownload()
+                    pauseDownload()
                 }
                 else -> {}
             }
@@ -51,10 +50,11 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     }
 
     /** Also sets currentStatus */
-    open fun setStatus(status: DownloadStatusTell?) {
+    override fun setStatus(status: DownloadStatusTell?) {
         currentStatus = status
 
-        progressBar.isVisible = status != null && status != DownloadStatusTell.Complete && status != DownloadStatusTell.Error
+        progressBar.isVisible =
+            status != null && status != DownloadStatusTell.Complete && status != DownloadStatusTell.Error
         progressBarBackground.isVisible = status != null && status != DownloadStatusTell.Complete
         val isPreActive = isZeroBytes && status == DownloadStatusTell.Active
 
@@ -90,7 +90,7 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
         }
 
         var downloadedBytes: Long = 0
-        var totalBytes: Long = 1 // div by zero error and 1 byte off is ok impo
+        var totalBytes: Long = 0
 
         val statusList = Array(status.size) { i ->
             getDownloadStatusFromTell(status[i].status)
@@ -105,6 +105,7 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
             statusList.contains(DownloadStatusTell.Complete) -> DownloadStatusTell.Complete
             else -> null
         }
+
         if (newStatus == null) {
             resetView()
             return
@@ -115,33 +116,8 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
             downloadedBytes += item.completedLength
         }
 
-        isZeroBytes = downloadedBytes == 0L
         setStatus(newStatus)
-
-        val steps = 10000L
-        progressBar.max = steps.toInt()
-        val progress = (downloadedBytes * steps / totalBytes).toInt()
-
-        val animation = ProgressBarAnimation(
-            progressBar,
-            progressBar.progress.toFloat(),
-            progress.toFloat()
-        ).apply {
-            fillAfter = true
-            duration =
-                if (progress > progressBar.progress) // we don't want to animate backward changes in progress
-                    100
-                else
-                    0L
-        }
-        progressBar.startAnimation(animation)
-
-        //progressBar.animate()
-        //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        //    progressBar.setProgress(progress, true)
-        //} else {
-        //    progressBar.progress = progress
-        //}
+        setProgress(downloadedBytes, totalBytes)
     }
 
     open fun getDrawableFromStatus(status: DownloadStatusTell?): Drawable? {

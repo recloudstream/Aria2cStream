@@ -197,13 +197,64 @@ abstract class AbstractClient(
         }
     }
 
-    data class JsonTell(
-        @JsonProperty("totalLength") val totalLength: Long,
+    data class JsonFile(
+        /** Index of the file, starting at 1, in the same order as files appear in the multi-file torrent.*/
+        @JsonProperty("index") val index: Int,
+        /** File path.*/
+        @JsonProperty("path") val path: String,
+        /** File size in bytes. */
+        @JsonProperty("length") val length: Long,
+        /** Completed length of this file in bytes. Please note that it is possible that sum of
+         * completedLength is less than the completedLength returned by the aria2.tellStatus()
+         * method. This is because completedLength in aria2.getFiles() only includes completed
+         * pieces. On the other hand, completedLength in aria2.tellStatus() also includes partially
+         * completed pieces.*/
         @JsonProperty("completedLength") val completedLength: Long,
+        /** true if this file is selected by --select-file option. If --select-file is not specified
+         * or this is single-file torrent or not a torrent download at all, this value is always true.
+         * Otherwise false. */
+        //@JsonProperty("selected") val selected: Boolean,
+        /** Returns a list of URIs for this file. The element type is the same struct used in the
+         * aria2.getUris() method.*/
+        //@JsonProperty("uris") val uris : ,
+    )
+
+    data class JsonTell(
+        /** Total length of the download in bytes. */
+        @JsonProperty("totalLength") val totalLength: Long,
+        /** Completed length of the download in bytes.*/
+        @JsonProperty("completedLength") val completedLength: Long,
+        /** GID of the download.*/
         @JsonProperty("gid") val gid: String,
+        /** The reverse link for followedBy. A download included in followedBy has this object's GID
+         * in its following value.*/
         @JsonProperty("following") val following: String?,
+        /** getDownloadStatusFromTell for enum, active for currently downloading/seeding downloads. waiting for downloads in the queue;
+         * download is not started. paused for paused downloads. error for downloads that were stopped
+         * because of error. complete for stopped and completed downloads. removed for the downloads
+         * removed by user.*/
         @JsonProperty("status") val status: String?,
+        /** List of GIDs which are generated as the result of this download.
+         * For example, when aria2 downloads a Metalink file, it generates downloads described in
+         * the Metalink (see the --follow-metalink option). This value is useful to track
+         * auto-generated downloads. If there are no such downloads, this key will not be included
+         * in the response.*/
         @JsonProperty("followedBy") val followedBy: ArrayList<String> = arrayListOf(),
+        /** Download speed of this download measured in bytes/sec. */
+        @JsonProperty("downloadSpeed") val downloadSpeed: Long,
+        /** Upload speed of this download measured in bytes/sec.*/
+        @JsonProperty("uploadSpeed") val uploadSpeed: Long,
+        /** The number of peers/servers aria2 has connected to. */
+        @JsonProperty("connections") val connections: Int,
+        /** Returns the list of files. The elements of this list are the same structs used in
+         * aria2.getFiles() method.*/
+        @JsonProperty("files") val files: ArrayList<JsonFile> = arrayListOf(),
+        /** The code of the last error for this item, if any. The value is a string.
+         * The error codes are defined in the EXIT STATUS section. This value is only
+         * available for stopped/completed downloads.*/
+        @JsonProperty("errorCode") val errorCode: Int? = null,
+        /** The (hopefully) human readable error message associated to errorCode. */
+        @JsonProperty("errorMessage") val errorMessage: String? = null,
     )
 
     @Volatile
@@ -330,7 +381,7 @@ abstract class AbstractClient(
         createRequest(Method.TELL_STOPPED, 0, Int.MAX_VALUE, tellKeys)
 
     private fun createPauseRequest(gid: String): AriaRequest =
-        createRequest(Method.FORCE_PAUSE, gid)
+        createRequest(Method.PAUSE, gid)
 
     private fun createUnPauseRequest(gid: String): AriaRequest = createRequest(Method.UNPAUSE, gid)
     private fun createRemoveRequest(gid: String): AriaRequest = createRequest(Method.REMOVE, gid)
@@ -421,11 +472,9 @@ abstract class AbstractClient(
 
     abstract fun connect()
 
-
     fun download(request: UriRequest, callback: (String?) -> Unit) {
         scope.launch {
             val result = sendUri(request)
-            println("DOWNLODA >>> $result")
             if (result.isFailure) {
                 result.exceptionOrNull()?.printStackTrace()
             }
