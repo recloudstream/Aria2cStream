@@ -258,32 +258,38 @@ abstract class AbstractClient(
         ).map { async { send<JsonTellParent>(it) } }.map { it.await() }
     }
 
-    private fun createUriRequest(data: UriRequest) = createUriRequest(data.uris, data.headers)
-
-    private fun createUriRequest(
-        uri: String,
-        headers: Map<String, String> = emptyMap()
-    ): AriaRequest = createUriRequest(listOf(uri), headers)
-
-    private fun createUriRequest(
-        uris: List<String>,
-        headers: Map<String, String> = emptyMap()
-    ): AriaRequest =
-        createRequest(
-            Method.ADD_URI,
-            JSONArray().apply { uris.forEach { uri -> put(uri) } }, // uris
-            JSONObject().apply {
-                if (headers.isNotEmpty()) {
-                    val array = JSONArray()
-                    for ((key, value) in headers) {
-                        array.put("$key:$value")
-                    }
-                    put("header", array)
+    private fun createUriRequest(data: UriRequest) = createRequest(
+        Method.ADD_URI,
+        JSONArray().apply { data.uris.forEach { uri -> put(uri) } }, // uris
+        JSONObject().apply {
+            if (data.headers.isNotEmpty()) {
+                val array = JSONArray()
+                for ((key, value) in data.headers) {
+                    array.put("$key:$value")
                 }
-            }, // options
-            Int.MAX_VALUE // position, max to push to the last position within the queue
-        )
+                put("header", array)
+            }
+            if (data.fileName != null)
+                put("out", data.fileName)
+            if (data.directory != null)
+                put("dir", data.directory)
+            if (data.checkIntegrity != null)
+                put("check-integrity", data.checkIntegrity)
+            if (data.continueDownload != null)
+                put("continue ", data.continueDownload)
+            if (data.userAgent != null)
+                put("user-agent ", data.userAgent)
+            if (data.seedRatio != null)
+                put("seed-ratio", data.seedRatio)
+            if (data.seedTime != null)
+                put("seed-time", data.seedTime)
+            if (data.referer != null)
+                put("referer", data.referer)
+        }, // options
+        Int.MAX_VALUE // position, max to push to the last position within the queue
+    )
 
+    //createUriRequest(data.uris, data.headers)
 
     //private fun createMultiRequest(vararg args: AriaRequest): AriaRequest =
     //    createMultiRequestList(args.toList())

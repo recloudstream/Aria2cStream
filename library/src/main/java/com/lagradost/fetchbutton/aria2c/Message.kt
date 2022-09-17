@@ -1,4 +1,7 @@
-package com.lagradost.fetchbutton.aria2c;
+package com.lagradost.fetchbutton.aria2c
+
+import android.util.Log
+import java.util.*
 
 //https://github.com/devgianlu/aria2lib/blob/2e4d4cd210f60dca4b723181f8150e6c530150dd/src/main/java/com/gianlu/aria2lib/internal/Message.java
 /*                                 Apache License
@@ -203,112 +206,73 @@ package com.lagradost.fetchbutton.aria2c;
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+class Message private constructor() {
+    companion object {
+        private val cache: Queue<Message> = LinkedList()
+        fun obtain(type: Type, o: Any?): Message {
+            return obtain(type, 0, o)
+        }
 
-import android.util.Log;
+        @JvmOverloads
+        fun obtain(type: Type, i: Int = 0, o: Any? = null): Message {
+            synchronized(cache) {
+                var msg =
+                    if (cache.isEmpty()) null else cache.poll()
+                if (msg == null) msg = Message()
+                msg.recycled = false
+                msg.type = type
+                msg.i = i
+                msg.o = o
+                return msg
+            }
+        }
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import java.util.LinkedList;
-import java.util.Queue;
-
-public final class Message {
-    private static final Queue<Message> cache = new LinkedList<>();
-
-    static {
-        for (int i = 0; i < 10; i++)
-            cache.add(new Message());
-    }
-
-    public int delay;
-    private Object o;
-    private int i;
-    private Type type;
-    private boolean recycled = false;
-
-    private Message() {
-    }
-
-    @NonNull
-    public static Message obtain(@NonNull Type type, Object o) {
-        return obtain(type, 0, o);
-    }
-
-    @NonNull
-    public static Message obtain(@NonNull Type type, int i) {
-        return obtain(type, i, null);
-    }
-
-    @NonNull
-    public static Message obtain(@NonNull Type type) {
-        return obtain(type, 0, null);
-    }
-
-    @NonNull
-    public static Message obtain(@NonNull Type type, int i, Object o) {
-        synchronized (cache) {
-            Message msg = cache.isEmpty() ? null : cache.poll();
-            if (msg == null) msg = new Message();
-            msg.recycled = false;
-            msg.type = type;
-            msg.i = i;
-            msg.o = o;
-            return msg;
+        init {
+            for (i in 0..9) cache.add(Message())
         }
     }
 
-    @NonNull
-    public Type type() {
-        return type;
+    var delay = 0
+    private var o: Any? = null
+    private var i = 0
+    private var type: Type? = null
+    private var recycled = false
+    fun type(): Type {
+        return type!!
     }
 
-    public int integer() {
-        return i;
+    fun integer(): Int {
+        return i
     }
 
-    @Nullable
-    public Object object() {
-        return o;
-    }
-
-    public void recycle() {
-        synchronized (cache) {
+    fun recycle() {
+        synchronized(cache) {
             if (!recycled) {
-                cache.add(this);
-                recycled = true;
+                cache.add(this)
+                recycled = true
             }
         }
     }
 
-    @Override
-    public String toString() {
-        return "Message{o=" + o + ", i=" + i + ", type=" + type + '}';
+    override fun toString(): String {
+        return "Message{o=$o, i=$i, type=$type}"
     }
 
-    public void log(@NonNull String tag) {
-        int p = type.getPriority();
-        if (p != -1) Log.println(p, tag, toString());
+    fun log(tag: String) {
+        val p: Int = type!!.priority
+        if (p != -1) Log.println(p, tag, toString())
     }
 
-    public enum Type {
-        PROCESS_TERMINATED, PROCESS_STARTED, MONITOR_FAILED, MONITOR_UPDATE,
-        PROCESS_WARN, PROCESS_ERROR, PROCESS_INFO;
+    enum class Type {
+        PROCESS_TERMINATED, PROCESS_STARTED, MONITOR_FAILED, MONITOR_UPDATE, PROCESS_WARN, PROCESS_ERROR, PROCESS_INFO;
 
-        private int getPriority() {
-            switch (this) {
-                case MONITOR_UPDATE:
-                    return -1;
-                case PROCESS_INFO:
-                case PROCESS_STARTED:
-                case PROCESS_TERMINATED:
-                    return Log.INFO;
-                case PROCESS_WARN:
-                    return Log.WARN;
-                default:
-                case PROCESS_ERROR:
-                case MONITOR_FAILED:
-                    return Log.ERROR;
+        val priority: Int
+            get() = when (this) {
+                MONITOR_UPDATE -> -1
+                PROCESS_INFO, PROCESS_STARTED, PROCESS_TERMINATED -> Log.INFO
+                PROCESS_WARN -> Log.WARN
+                PROCESS_ERROR, MONITOR_FAILED -> Log.ERROR
+                else -> Log.ERROR
             }
-        }
     }
 }
