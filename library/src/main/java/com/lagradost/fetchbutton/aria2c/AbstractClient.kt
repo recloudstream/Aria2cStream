@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.fetchbutton.Aria2Save.setKey
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.getInfo
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -278,11 +279,12 @@ abstract class AbstractClient(
         updateMutex.withLock {
             batchRequestStatus().forEach { resultList ->
                 resultList.getOrNull()?.results?.forEach { json ->
-                    // if less then 10% completed and error
-                    if (json.status == "error" && json.completedLength * 100L / (json.totalLength + 1) < 10L) {
+                    // if less then 5% completed and error
+                    if (json.status == "error" && json.completedLength * 100L / (json.totalLength + 1) < 5L) {
                         DownloadListener.failQueueMapMutex.withLock {
                             DownloadListener.failQueueMap[json.gid]?.let { queue ->
                                 DownloadListener.failQueueMap.remove(json.gid)
+                                remove(json.gid, true)
                                 downloadFailQueue(queue.slice(1 until queue.size)) { _, _ -> }
                             }
                         }
@@ -292,7 +294,7 @@ abstract class AbstractClient(
                         DownloadListener.sessionIdToLastRequest[id]?.let { lastRequest ->
                             Aria2Starter.saveActivity.get()?.setKey(
                                 id,
-                                SavedData(lastRequest, json.files)
+                                SavedData(lastRequest, getInfo(json.gid).map { it.files }.flatten())
                             )
                         }
                     }
@@ -413,7 +415,6 @@ abstract class AbstractClient(
     private fun createUnPauseRequest(gid: String): AriaRequest = createRequest(Method.UNPAUSE, gid)
     private fun createRemoveRequest(gid: String): AriaRequest = createRequest(Method.REMOVE, gid)
 
-
     private fun createRequest(method: Method, vararg args: Any): AriaRequest =
         AriaRequest(id = ++requestId, method = method, params = arrayOf(*args))
 
@@ -423,7 +424,7 @@ abstract class AbstractClient(
 
     suspend fun pauseAsync(gid: String, all: Boolean) {
         if (all) {
-            DownloadListener.getInfo(gid)
+            getInfo(gid)
                 .forEach { item -> sendRaw(createPauseRequest(item.gid)) }
         } else {
             sendRaw(createPauseRequest(gid))
@@ -436,7 +437,7 @@ abstract class AbstractClient(
 
     suspend fun unpauseAsync(gid: String, all: Boolean = true) {
         if (all) {
-            DownloadListener.getInfo(gid)
+            getInfo(gid)
                 .forEach { item -> sendRaw(createUnPauseRequest(item.gid)) }
         } else {
             sendRaw(createUnPauseRequest(gid))
@@ -449,7 +450,7 @@ abstract class AbstractClient(
 
     suspend fun removeAsync(gid: String, all: Boolean = true) {
         if (all) {
-            DownloadListener.getInfo(gid)
+            getInfo(gid)
                 .forEach { item -> sendRaw(createRemoveRequest(item.gid)) }
         } else {
             sendRaw(createRemoveRequest(gid))

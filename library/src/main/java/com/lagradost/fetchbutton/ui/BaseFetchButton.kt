@@ -82,7 +82,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
                 }
                 setProgress(downloadedBytes, totalBytes)
                 // some extra padding for just in case
-                setStatus(if (downloadedBytes + 1024L >= totalBytes) DownloadStatusTell.Complete else DownloadStatusTell.Paused)
+                setStatus(if (downloadedBytes > 1024L && downloadedBytes + 1024L >= totalBytes) DownloadStatusTell.Complete else DownloadStatusTell.Paused)
             } ?: run {
                 resetView()
             }
@@ -149,7 +149,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     abstract fun resetView()
 
     open fun performDownload(request: UriRequest) {
-        Aria2Starter.client?.download(request) { localGid ->
+        Aria2Starter.client?.download(request) { _ ->
             lastRequest = null
         }
     }

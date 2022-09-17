@@ -35,12 +35,15 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     open fun setDefaultClickListener(requestGetter: suspend BaseFetchButton.() -> List<UriRequest>) {
         this.setOnClickListener {
             when (this.currentStatus) {
-                null -> ioThread {
-                    val request = requestGetter.invoke(this)
-                    if (request.size == 1) {
-                        performDownload(request.first())
-                    } else if (request.isNotEmpty()) {
-                        performFailQueueDownload(request)
+                null -> {
+                    setStatus(DownloadStatusTell.Waiting)
+                    ioThread {
+                        val request = requestGetter.invoke(this)
+                        if (request.size == 1) {
+                            performDownload(request.first())
+                        } else if (request.isNotEmpty()) {
+                            performFailQueueDownload(request)
+                        }
                     }
                 }
                 DownloadStatusTell.Paused -> {
