@@ -8,8 +8,9 @@ import androidx.core.widget.ContentLoadingProgressBar
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.fetchbutton.Aria2Save.getKey
-import com.lagradost.fetchbutton.Aria2Save.setKey
 import com.lagradost.fetchbutton.aria2c.AbstractClient
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToGid
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToLastRequest
 import com.lagradost.fetchbutton.aria2c.Aria2Starter
 import com.lagradost.fetchbutton.aria2c.DownloadStatusTell
 import com.lagradost.fetchbutton.aria2c.UriRequest
@@ -17,7 +18,7 @@ import com.lagradost.fetchbutton.aria2c.UriRequest
 abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     FrameLayout(context, attributeSet) {
 
-    private var _persistentId: Long? = null // used to save sessions
+    var persistentId: Long? = null // used to save sessions
 
     data class SavedData(
         @JsonProperty("uriRequest") val uriRequest: UriRequest,
@@ -25,13 +26,21 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     )
 
     lateinit var progressBar: ContentLoadingProgressBar
-    protected var gid: String? = null
-    protected var lastRequest: UriRequest? = null
+    protected val gid: String? get() = sessionIdToGid[persistentId]
+
+    // used for resuming data
+    private var _lastRequestOverride: UriRequest? = null
+    protected var lastRequest: UriRequest?
+        get() = _lastRequestOverride ?: sessionIdToLastRequest[persistentId]
+        set(value) {
+            _lastRequestOverride = value
+        }
+
     protected var isZeroBytes: Boolean = true
     var files: List<AbstractClient.JsonFile> = emptyList()
 
     companion object {
-        val sessionIdToGid = hashMapOf<Long, String>()
+        //val sessionQueue = hashMapOf<Long, List<UriRequest>>()
         const val setKeyRate = 1
     }
 
@@ -51,16 +60,14 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     }
 
     open fun resetViewData() {
-        gid = null
         lastRequest = null
         isZeroBytes = true
-        _persistentId = null
+        persistentId = null
     }
 
     fun setPersistentId(id: Long) {
-        _persistentId = id
-        sessionIdToGid[id]?.let { localGid ->
-            gid = localGid
+        persistentId = id
+        gid?.let { _ ->
             updateViewOnDownloadWithChecks(-1)
         } ?: run {
             this.context?.getKey<SavedData>(id)?.let { savedData ->
@@ -74,7 +81,8 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
                     totalBytes += file.length
                 }
                 setProgress(downloadedBytes, totalBytes)
-                setStatus(DownloadStatusTell.Paused)
+                // some extra padding for just in case
+                setStatus(if (downloadedBytes + 1024L >= totalBytes) DownloadStatusTell.Complete else DownloadStatusTell.Paused)
             } ?: run {
                 resetView()
             }
@@ -117,11 +125,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     private fun updateViewOnDownloadWithChecks(updateCount: Int) {
         val info = AbstractClient.DownloadListener.getInfo(gid ?: return)
         files = info.map { it.files }.flatten()
-        if (updateCount % setKeyRate == 0)
-            context?.setKey(
-                _persistentId ?: return,
-                SavedData(lastRequest ?: return, files)
-            )
+
         updateViewOnDownload(info)
     }
 
@@ -145,14 +149,19 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     abstract fun resetView()
 
     open fun performDownload(request: UriRequest) {
-        Aria2Starter.client?.download(request) {
-            lastRequest = request
-            gid = it
-            println("GID====$gid")
+        Aria2Starter.client?.download(request) { localGid ->
+            lastRequest = null
+        }
+    }
+
+    open fun performFailQueueDownload(request: List<UriRequest>) {
+        Aria2Starter.client?.downloadFailQueue(request) { _, _ ->
+            lastRequest = null
         }
     }
 
     fun pauseDownload() {
+        setStatus(DownloadStatusTell.Waiting)
         val localGid = gid ?: return
         Aria2Starter.client?.run {
             pause(localGid)
@@ -161,6 +170,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     }
 
     fun resumeDownload() {
+        setStatus(DownloadStatusTell.Waiting)
         gid?.let { localGid ->
             Aria2Starter.client?.run {
                 unpause(localGid)
@@ -171,7 +181,18 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
         }
     }
 
+    fun redownload() {
+        //val localGid = gid ?: return
+        setStatus(DownloadStatusTell.Waiting)
+        Aria2Starter.client?.run {
+            //remove(localGid)
+            download(lastRequest ?: return@run) { }
+            forceUpdate()
+        }
+    }
+
     fun cancelDownload() {
+        setStatus(DownloadStatusTell.Waiting)
         val localGid = gid ?: return
         Aria2Starter.client?.run {
             remove(localGid)

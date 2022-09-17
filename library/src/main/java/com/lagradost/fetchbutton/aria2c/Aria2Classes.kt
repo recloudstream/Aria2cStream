@@ -33,6 +33,7 @@ enum class DownloadStatusTell {
 
 /**Docs over at https://aria2.github.io/manual/en/html/aria2c.html*/
 data class UriRequest(
+    val id : Long,
     /**uris is an array of HTTP/FTP/SFTP/BitTorrent URIs (strings) pointing to the same resource.
      * If you mix URIs pointing to different resources, then the download may fail or be corrupted
      * without aria2 complaining. When adding BitTorrent Magnet URIs, uris must have only one element
@@ -88,6 +89,7 @@ data class UriRequest(
  * @param seed if false, disables seeding after download completed
  * */
 fun newUriRequest(
+    id : Long,
     uri: String,
     fileName: String? = null,
     directory: String? = null,
@@ -96,6 +98,7 @@ fun newUriRequest(
     seed: Boolean = false,
 ): UriRequest {
     return UriRequest(
+        id = id,
         uris = listOf(uri),
         fileName = fileName,
         headers = headers,
@@ -104,6 +107,11 @@ fun newUriRequest(
         seedTime = if (seed) null else 0.0f
     )
 }
+
+data class SavedData(
+    @JsonProperty("uriRequest") val uriRequest: UriRequest,
+    @JsonProperty("files") val files: List<AbstractClient.JsonFile>
+)
 
 fun getDownloadStatusFromTell(str: String?): DownloadStatusTell? {
     return when (str) {

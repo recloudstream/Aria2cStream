@@ -7,6 +7,7 @@ import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.lagradost.fetchbutton.R
 import com.lagradost.fetchbutton.aria2c.AbstractClient
@@ -31,18 +32,25 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
         setStatus(null)
     }
 
-    open fun setDefaultClickListener(requestGetter: suspend (Context) -> UriRequest) {
+    open fun setDefaultClickListener(requestGetter: suspend BaseFetchButton.() -> List<UriRequest>) {
         this.setOnClickListener {
             when (this.currentStatus) {
                 null -> ioThread {
-                    val request = requestGetter.invoke(context)
-                    performDownload(request)
+                    val request = requestGetter.invoke(this)
+                    if (request.size == 1) {
+                        performDownload(request.first())
+                    } else if (request.isNotEmpty()) {
+                        performFailQueueDownload(request)
+                    }
                 }
                 DownloadStatusTell.Paused -> {
                     resumeDownload()
                 }
                 DownloadStatusTell.Active -> {
                     pauseDownload()
+                }
+                DownloadStatusTell.Error -> {
+                    redownload()
                 }
                 else -> {}
             }
@@ -53,9 +61,9 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     override fun setStatus(status: DownloadStatusTell?) {
         currentStatus = status
 
-        progressBar.isVisible =
-            status != null && status != DownloadStatusTell.Complete && status != DownloadStatusTell.Error
-        progressBarBackground.isVisible = status != null && status != DownloadStatusTell.Complete
+        //progressBar.isVisible =
+        //    status != null && status != DownloadStatusTell.Complete && status != DownloadStatusTell.Error
+        //progressBarBackground.isVisible = status != null && status != DownloadStatusTell.Complete
         val isPreActive = isZeroBytes && status == DownloadStatusTell.Active
 
         if (status == DownloadStatusTell.Waiting || isPreActive) {
@@ -66,14 +74,20 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
         }
 
         val progressDrawable =
-            if ((status == DownloadStatusTell.Error || status == DownloadStatusTell.Active) && !isPreActive) R.drawable.circle_shape else R.drawable.circle_shape_dotted
+            if (status == DownloadStatusTell.Active && !isPreActive) R.drawable.circle_shape else R.drawable.circle_shape_dotted
 
         progressBarBackground.background =
             ContextCompat.getDrawable(context, progressDrawable)
 
         val drawable = getDrawableFromStatus(status)
         statusView.setImageDrawable(drawable)
-        statusView.isVisible = drawable != null
+        val isDrawable = drawable != null
+
+        statusView.isVisible = isDrawable
+        if (isDrawable) progressBar.clearAnimation()
+        if (isDrawable) progressBarBackground.clearAnimation()
+        progressBarBackground.isVisible = status == DownloadStatusTell.Error || !isDrawable
+        progressBar.isGone = isDrawable
     }
 
     override fun resetView() {
@@ -116,8 +130,15 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
             downloadedBytes += item.completedLength
         }
 
-        setStatus(newStatus)
-        setProgress(downloadedBytes, totalBytes)
+        val isDone =
+            newStatus == DownloadStatusTell.Complete || (downloadedBytes > 1024 && downloadedBytes + 1024 >= totalBytes)
+
+        if (isDone)
+            setStatus(DownloadStatusTell.Complete)
+        else {
+            setProgress(downloadedBytes, totalBytes)
+            setStatus(newStatus)
+        }
     }
 
     open fun getDrawableFromStatus(status: DownloadStatusTell?): Drawable? {

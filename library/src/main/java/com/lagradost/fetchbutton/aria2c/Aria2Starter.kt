@@ -3,6 +3,7 @@ package com.lagradost.fetchbutton.aria2c
 import android.app.Activity
 import android.util.Log
 import java.io.File
+import java.lang.ref.WeakReference
 
 data class Aria2Settings(
     val token: String,
@@ -23,12 +24,15 @@ object Aria2Starter {
 
     var client: AbstractClient? = null
     var aria2: Aria2? = null
+    // this is used to store keys
+    var saveActivity: WeakReference<Activity> = WeakReference(null)
 
     fun start(
         activity: Activity,
         settings: Aria2Settings,
         clientSettings: Aria2OverrideClientSettings = Aria2OverrideClientSettings()
     ) {
+        saveActivity = WeakReference(activity)
         val parent: File = activity.filesDir
 
         aria2 = Aria2.get().also { ar ->

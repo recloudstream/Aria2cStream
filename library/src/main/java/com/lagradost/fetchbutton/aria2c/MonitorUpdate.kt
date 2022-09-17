@@ -1,4 +1,7 @@
-package com.lagradost.fetchbutton.aria2c;
+package com.lagradost.fetchbutton.aria2c
+
+import java.io.Serializable
+import java.util.*
 
 //https://github.com/devgianlu/aria2lib/blob/2e4d4cd210f60dca4b723181f8150e6c530150dd/src/main/java/com/gianlu/aria2lib/internal/MonitorUpdate.java
 /*                                 Apache License
@@ -203,57 +206,44 @@ package com.lagradost.fetchbutton.aria2c;
    See the License for the specific language governing permissions and
    limitations under the License.
 */
+class MonitorUpdate private constructor() : Serializable {
+    companion object {
+        private val cache: Queue<MonitorUpdate> = LinkedList()
+        fun obtain(pid: Int, cpu: String, rss: Int): MonitorUpdate {
+            var msg = cache.poll()
+            if (msg == null) msg = MonitorUpdate()
+            msg.recycled = false
+            msg.pid = pid
+            msg.cpu = cpu
+            msg.rss = rss
+            return msg
+        }
 
-import androidx.annotation.NonNull;
-
-import java.io.Serializable;
-import java.util.LinkedList;
-import java.util.Queue;
-
-public final class MonitorUpdate implements Serializable {
-    private static final Queue<MonitorUpdate> cache = new LinkedList<>();
-
-    static {
-        for (int i = 0; i < 10; i++)
-            cache.add(new MonitorUpdate());
-    }
-
-    private boolean recycled = false;
-    private int rss;
-    private String cpu;
-    private int pid;
-
-    private MonitorUpdate() {
-    }
-
-    @NonNull
-    public static MonitorUpdate obtain(int pid, @NonNull String cpu, int rss) {
-        MonitorUpdate msg = cache.poll();
-        if (msg == null) msg = new MonitorUpdate();
-        msg.recycled = false;
-        msg.pid = pid;
-        msg.cpu = cpu;
-        msg.rss = rss;
-        return msg;
-    }
-
-    public void recycle() {
-        if (!recycled) {
-            cache.add(this);
-            recycled = true;
+        init {
+            for (i in 0..9) cache.add(MonitorUpdate())
         }
     }
 
-    public int pid() {
-        return pid;
+    private var recycled = false
+    private var rss = 0
+    private var cpu: String? = null
+    private var pid = 0
+    fun recycle() {
+        if (!recycled) {
+            cache.add(this)
+            recycled = true
+        }
     }
 
-    @NonNull
-    public String cpu() {
-        return cpu;
+    fun pid(): Int {
+        return pid
     }
 
-    public int rss() {
-        return rss;
+    fun cpu(): String {
+        return cpu!!
+    }
+
+    fun rss(): Int {
+        return rss
     }
 }

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.lagradost.fetchbutton.Aria2Save.setKey
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -33,15 +34,19 @@ abstract class AbstractClient(
         val statusUpdateRateMs: Long,
     )
 
-
-    data class DownloadData(
-        val status: DownloadStatus,
-        val gid: String,
-    )
-
     object DownloadListener {
         //private val currentDownloadData: HashMap<String, DownloadStatus> = hashMapOf()
         private val downloadDataUpdateCount = MutableLiveData<Int>()
+        val sessionIdToGid = hashMapOf<Long, String>()
+        val sessionGidToId = hashMapOf<String, Long>()
+
+        fun insert(gid: String, id: Long) {
+            sessionIdToGid[id] = gid
+            sessionGidToId[gid] = id
+        }
+
+        val sessionIdToLastRequest = hashMapOf<Long, UriRequest>()
+
         //private val currentDownloadDataMutex = Mutex()
 
         val currentDownloadStatus: HashMap<String, JsonTell> = hashMapOf()
@@ -52,6 +57,9 @@ abstract class AbstractClient(
         private fun getStatus(gid: String): JsonTell? {
             return currentDownloadStatus[gid]
         }
+
+        val failQueueMap = hashMapOf<String, List<UriRequest>>()
+        val failQueueMapMutex = Mutex()
 
         fun observe(scope: LifecycleOwner, collector: (Int) -> Unit) {
             CoroutineScope(Dispatchers.Main).launch {
@@ -270,6 +278,25 @@ abstract class AbstractClient(
         updateMutex.withLock {
             batchRequestStatus().forEach { resultList ->
                 resultList.getOrNull()?.results?.forEach { json ->
+                    // if less then 10% completed and error
+                    if (json.status == "error" && json.completedLength * 100L / (json.totalLength + 1) < 10L) {
+                        DownloadListener.failQueueMapMutex.withLock {
+                            DownloadListener.failQueueMap[json.gid]?.let { queue ->
+                                DownloadListener.failQueueMap.remove(json.gid)
+                                downloadFailQueue(queue.slice(1 until queue.size)) { _, _ -> }
+                            }
+                        }
+                    }
+
+                    DownloadListener.sessionGidToId[json.gid]?.let { id ->
+                        DownloadListener.sessionIdToLastRequest[id]?.let { lastRequest ->
+                            Aria2Starter.saveActivity.get()?.setKey(
+                                id,
+                                SavedData(lastRequest, json.files)
+                            )
+                        }
+                    }
+
                     DownloadListener.currentDownloadStatus[json.gid] = json
                 }
             }
@@ -472,13 +499,38 @@ abstract class AbstractClient(
 
     abstract fun connect()
 
-    fun download(request: UriRequest, callback: (String?) -> Unit) {
+    fun downloadFailQueue(requests: List<UriRequest>, callback: (String, Int) -> Unit) {
+        scope.launch {
+            for (i in requests.indices) {
+                val result = sendUri(requests[i])
+                val localGid = result.getOrNull()
+                if (localGid != null) {
+                    DownloadListener.failQueueMapMutex.withLock {
+                        DownloadListener.failQueueMap[localGid] =
+                            requests.slice(i until requests.size)
+                    }
+                    val localId = requests[i].id
+                    DownloadListener.insert(localGid, localId)
+                    DownloadListener.sessionGidToId[localGid] = localId
+                    DownloadListener.sessionIdToLastRequest[localId] = requests[i]
+                    callback.invoke(localGid, i)
+                    return@launch
+                }
+            }
+        }
+    }
+
+    fun download(request: UriRequest, callback: (String) -> Unit) {
         scope.launch {
             val result = sendUri(request)
             if (result.isFailure) {
                 result.exceptionOrNull()?.printStackTrace()
             }
-            callback.invoke(result.getOrNull())
+            DownloadListener.sessionIdToLastRequest[request.id] = request
+            result.getOrNull()?.let { gid ->
+                DownloadListener.insert(gid, request.id)
+                callback.invoke(gid)
+            }
         }
     }
 
@@ -488,7 +540,6 @@ abstract class AbstractClient(
             resp.resultGid
         }
     }
-
 
     suspend fun sendTellStatus(gid: String): Result<JsonStatus> {
         val req = createTellStatusRequest(gid)
