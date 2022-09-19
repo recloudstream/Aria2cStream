@@ -1,38 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:background="@android:color/holo_blue_light">
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:background="@android:color/holo_blue_light">
 
     <androidx.core.widget.ContentLoadingProgressBar
-        android:id="@+id/progress_downloaded"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:layout_margin="5dp"
-        android:indeterminate="false"
-        android:max="100"
-        android:progress="0"
-        android:progressDrawable="@drawable/circular_progress_bar"
-        android:visibility="visible" />
+            android:id="@+id/progress_downloaded"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="0"
+
+            tools:progress="60"
+            android:progressDrawable="@drawable/circular_progress_bar_top_to_bottom"
+            android:visibility="visible" />
 
     <View
-        android:id="@+id/progress_downloaded_background"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_margin="5dp"
-        android:background="@drawable/circle_shape_dotted" />
+            android:id="@+id/progress_downloaded_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="5dp"
+            android:background="@drawable/circle_shape_dotted" />
 
     <ImageView
-        android:id="@+id/image_download_status"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
-        android:padding="2dp"
-        android:src="@drawable/ic_baseline_play_arrow_24"
-        android:visibility="visible" />
+            tools:visibility="gone"
+            android:id="@+id/image_download_status"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:padding="2dp"
+            android:src="@drawable/ic_baseline_play_arrow_24"
+            android:visibility="visible" />
 </FrameLayout>

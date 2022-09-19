@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
         android:innerRadiusRatio="2.5"
-        android:shape="ring"
+        android:shape="oval"
         android:thickness="0dp"
         android:useLevel="false">
-    <stroke
-            android:width="2dp"
-            android:color="?attr/aria2c_outline_color"
-            android:dashWidth="10px"
-            android:dashGap="10px" />
+    <solid
+            android:color="#ccC" tools:color="#ccc" />
 </shape>

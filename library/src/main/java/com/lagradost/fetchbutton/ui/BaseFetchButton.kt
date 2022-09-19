@@ -39,24 +39,12 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     protected var isZeroBytes: Boolean = true
     var files: List<AbstractClient.JsonFile> = emptyList()
 
-    companion object {
-        //val sessionQueue = hashMapOf<Long, List<UriRequest>>()
-        const val setKeyRate = 1
-    }
-
     fun inflate(@LayoutRes layout: Int) {
         inflate(context, layout, this)
     }
 
-    /**
-     * Create your view here with inflate(layout) and other stuff.
-     * Akin to onCreateView.
-     * */
-    abstract fun init()
-
     init {
         resetViewData()
-        init()
     }
 
     open fun resetViewData() {

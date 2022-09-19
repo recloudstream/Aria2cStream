@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--https://developer.android.com/develop/ui/views/layout/custom-views/create-view#customattr-->
+    <declare-styleable name="PieFetchButton">
+        <attr name="aria2c_view" format="reference" />
+        <attr name="aria2c_background_progress" format="reference" />
+        <attr name="aria2c_outline_active" format="reference" />
+        <attr name="aria2c_outline_non_active" format="reference" />
+        <attr name="aria2c_waiting_animation" format="reference" />
+        <attr name="aria2c_progress_drawable" format="reference" />
+        <attr name="aria2c_animate_waiting" format="boolean" />
+        <attr name="aria2c_fill_color" format="color" />
+        <attr name="aria2c_outline_color" format="color" />
+        <attr name="aria2c_fill" format="enum">
+            <enum name="clockwise" value="0" />
+            <enum name="counter_clockwise" value="1" />
+            <enum name="small_to_large" value="2" />
+            <!--<enum name="top_to_bottom" value="3" />-->
+        </attr>
+
+        <attr name="aria2c_fill_override" format="reference" />
+
+        <attr name="aria2c_hide_when_icon" format="boolean" />
+
+        <attr name="aria2c_icon_init" format="reference" />
+        <attr name="aria2c_icon_error" format="reference" />
+        <attr name="aria2c_icon_complete" format="reference" />
+        <attr name="aria2c_icon_active" format="reference" />
+        <attr name="aria2c_icon_waiting" format="reference" />
+        <attr name="aria2c_icon_removed" format="reference" />
+        <attr name="aria2c_icon_paused" format="reference" />
+    </declare-styleable>
+</resources>

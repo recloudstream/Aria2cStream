@@ -1,20 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/design_default_color_secondary_variant"
-    tools:context="com.lagradost.fetchbutton.example.MainActivity">
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/design_default_color_secondary_variant"
+        tools:context="com.lagradost.fetchbutton.example.MainActivity">
 
     <com.lagradost.fetchbutton.ui.PieFetchButton
-        android:id="@+id/download_button"
-        android:layout_width="80dp"
-        android:layout_height="80dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-    </com.lagradost.fetchbutton.ui.PieFetchButton>
+            android:id="@+id/download_button"
+            app:aria2c_fill_color="@color/design_default_color_primary"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            app:aria2c_progress_drawable="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            app:aria2c_fill="small_to_large"
+            app:aria2c_icon_paused="@drawable/download_icon_load"
+            app:aria2c_hide_when_icon="false"
+
+            app:aria2c_animate_waiting="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
