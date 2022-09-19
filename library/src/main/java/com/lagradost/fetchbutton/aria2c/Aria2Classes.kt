@@ -33,7 +33,8 @@ enum class DownloadStatusTell {
 
 /**Docs over at https://aria2.github.io/manual/en/html/aria2c.html*/
 data class UriRequest(
-    val id : Long,
+    /** set to null if you don't want to track it*/
+    val id: Long?,
     /**uris is an array of HTTP/FTP/SFTP/BitTorrent URIs (strings) pointing to the same resource.
      * If you mix URIs pointing to different resources, then the download may fail or be corrupted
      * without aria2 complaining. When adding BitTorrent Magnet URIs, uris must have only one element
@@ -89,7 +90,7 @@ data class UriRequest(
  * @param seed if false, disables seeding after download completed
  * */
 fun newUriRequest(
-    id : Long,
+    id: Long?,
     uri: String,
     fileName: String? = null,
     directory: String? = null,
@@ -144,3 +145,28 @@ data class JsonError(
     @JsonProperty("code") val code: Int,
     @JsonProperty("message") val message: String,
 )
+
+data class Metadata(
+    val items: ArrayList<AbstractClient.JsonTell>
+) {
+    val status by lazy { getStatus(items) }
+    val totalLength by lazy { items.sumOf { it.totalLength } }
+    val downloadedLength by lazy { items.sumOf { it.completedLength } }
+    val progressPercentage by lazy { (downloadedLength * 100L / (totalLength + 1L)).toInt() }
+}
+
+fun getStatus(status: ArrayList<AbstractClient.JsonTell>): DownloadStatusTell? {
+    val statusList = Array(status.size) { i ->
+        getDownloadStatusFromTell(status[i].status)
+    }
+
+    return when { // this is the priority sorter based on all the files
+        statusList.contains(DownloadStatusTell.Active) -> DownloadStatusTell.Active
+        statusList.contains(DownloadStatusTell.Waiting) -> DownloadStatusTell.Waiting
+        statusList.contains(DownloadStatusTell.Error) -> DownloadStatusTell.Error
+        statusList.contains(DownloadStatusTell.Paused) -> DownloadStatusTell.Paused
+        statusList.contains(DownloadStatusTell.Removed) -> DownloadStatusTell.Removed
+        statusList.contains(DownloadStatusTell.Complete) -> DownloadStatusTell.Complete
+        else -> null
+    }
+}

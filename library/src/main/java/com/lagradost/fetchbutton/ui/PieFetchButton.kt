@@ -10,10 +10,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.lagradost.fetchbutton.R
-import com.lagradost.fetchbutton.aria2c.AbstractClient
 import com.lagradost.fetchbutton.aria2c.DownloadStatusTell
+import com.lagradost.fetchbutton.aria2c.Metadata
 import com.lagradost.fetchbutton.aria2c.UriRequest
-import com.lagradost.fetchbutton.aria2c.getDownloadStatusFromTell
 import com.lagradost.fetchbutton.utils.Coroutines.ioThread
 
 
@@ -39,6 +38,42 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
             R.drawable.circular_progress_bar_counter_clockwise,
             R.drawable.circular_progress_bar_small_to_large,
             R.drawable.circular_progress_bar_top_to_bottom,
+        )
+        val videoFormats = listOf(
+            ".3g2",
+            ".3gp",
+            ".amv",
+            ".asf",
+            ".avi",
+            ".drc",
+            ".flv",
+            ".f4v",
+            ".f4p",
+            ".f4a",
+            ".f4b",
+            ".gif",
+            ".gifv",
+            ".m4v",
+            ".mkv",
+            ".mng",
+            ".mov",
+            ".qt",
+            ".mp4",
+            ".m4p",
+            ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv",
+            ".mpg", ".mpeg", ".m2v",
+            ".MTS", ".M2TS", ".TS",
+            ".mxf",
+            ".nsv",
+            ".ogv", ".ogg",
+            //".rm", // Made for RealPlayer
+            //".rmvb", // Made for RealPlayer
+            ".svi",
+            ".viv",
+            ".vob",
+            ".webm",
+            ".wmv",
+            ".yuv"
         )
     }
 
@@ -98,7 +133,7 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
                 R.styleable.PieFetchButton_aria2c_icon_waiting, 0
             )
             iconRemoved = getResourceId(
-                R.styleable.PieFetchButton_aria2c_icon_removed, 0
+                R.styleable.PieFetchButton_aria2c_icon_removed, R.drawable.netflix_download
             )
 
             val fillIndex = getInt(R.styleable.PieFetchButton_aria2c_fill, 0)
@@ -114,7 +149,7 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
         resetView()
     }
 
-    private var currentStatus: DownloadStatusTell? = null
+    var currentStatus: DownloadStatusTell? = null
 
     open fun setDefaultClickListener(requestGetter: suspend BaseFetchButton.() -> List<UriRequest>) {
         this.setOnClickListener {
@@ -140,6 +175,18 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
                     redownload()
                 }
                 else -> {}
+            }
+        }
+    }
+
+    fun getVideos() = getFiles(suffixList = videoFormats, ignoreCase = true)
+
+    fun getFiles(suffixList: List<String> = emptyList(), ignoreCase: Boolean = true): List<String> {
+        return if (suffixList.isEmpty()) {
+            files.map { file -> file.path }
+        } else {
+            files.map { file -> file.path }.filter { path ->
+                suffixList.any { suf -> path.endsWith(suffix = suf, ignoreCase = ignoreCase) }
             }
         }
     }
@@ -171,10 +218,13 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
         val isDrawable = drawable != null
 
         statusView.isVisible = isDrawable
-        if (isDrawable) progressBar.clearAnimation()
-        if (isDrawable) progressBarBackground.clearAnimation()
-        progressBarBackground.isGone = hideWhenIcon && isDrawable
-        progressBar.isGone = hideWhenIcon && isDrawable
+        val hide = hideWhenIcon && isDrawable
+        if (hide) {
+            progressBar.clearAnimation()
+            progressBarBackground.clearAnimation()
+        }
+        progressBarBackground.isGone = hide
+        progressBar.isGone = hide
     }
 
     override fun resetView() {
@@ -183,46 +233,26 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
         progressBar.progress = 0
     }
 
-    override fun updateViewOnDownload(status: ArrayList<AbstractClient.JsonTell>) {
-        if (status.isEmpty()) {
+    override fun updateViewOnDownload(metadata: Metadata) {
+        if (metadata.items.isEmpty()) {
             resetView()
             return
         }
 
-        var downloadedBytes: Long = 0
-        var totalBytes: Long = 0
-
-        val statusList = Array(status.size) { i ->
-            getDownloadStatusFromTell(status[i].status)
-        }
-
-        val newStatus = when { // this is the priority sorter based on all the files
-            statusList.contains(DownloadStatusTell.Active) -> DownloadStatusTell.Active
-            statusList.contains(DownloadStatusTell.Waiting) -> DownloadStatusTell.Waiting
-            statusList.contains(DownloadStatusTell.Error) -> DownloadStatusTell.Error
-            statusList.contains(DownloadStatusTell.Paused) -> DownloadStatusTell.Paused
-            statusList.contains(DownloadStatusTell.Removed) -> DownloadStatusTell.Removed
-            statusList.contains(DownloadStatusTell.Complete) -> DownloadStatusTell.Complete
-            else -> null
-        }
+        val newStatus = metadata.status
 
         if (newStatus == null) {
             resetView()
             return
         }
 
-        for (item in status) {
-            totalBytes += item.totalLength
-            downloadedBytes += item.completedLength
-        }
-
         val isDone =
-            newStatus == DownloadStatusTell.Complete || (downloadedBytes > 1024 && downloadedBytes + 1024 >= totalBytes)
+            newStatus == DownloadStatusTell.Complete || (metadata.downloadedLength > 1024 && metadata.downloadedLength + 1024 >= metadata.totalLength)
 
         if (isDone)
             setStatus(DownloadStatusTell.Complete)
         else {
-            setProgress(downloadedBytes, totalBytes)
+            setProgress(metadata.downloadedLength, metadata.totalLength)
             setStatus(newStatus)
         }
     }

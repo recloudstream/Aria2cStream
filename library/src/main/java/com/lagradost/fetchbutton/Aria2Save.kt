@@ -28,6 +28,16 @@ object Aria2Save {
         }
     }
 
+    fun Context.removeKey(id : Long) {
+        try {
+            val editor: SharedPreferences.Editor = getPref(this).edit()
+            editor.remove(id.toString())
+            editor.apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     inline fun <reified T : Any> Context.getKey(id : Long) : T? {
         try {
             val str = getPref(this).getString(id.toString(), null) ?: return null

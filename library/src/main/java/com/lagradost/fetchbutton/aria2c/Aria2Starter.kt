@@ -24,8 +24,35 @@ object Aria2Starter {
 
     var client: AbstractClient? = null
     var aria2: Aria2? = null
+
     // this is used to store keys
     var saveActivity: WeakReference<Activity> = WeakReference(null)
+
+    fun download(request: UriRequest) {
+        client?.download(request) {}
+    }
+
+    fun download(request: List<UriRequest>) {
+        client?.downloadFailQueue(request) { _, _ -> }
+    }
+
+    fun download(vararg requests: UriRequest) {
+        client?.downloadFailQueue(requests.toList()) { _, _ -> }
+    }
+
+    //fun pause(gid: String, all: Boolean = true) {
+    //    client?.run {
+    //        pause(gid, all)
+    //        //forceUpdate()
+    //    }
+    //}
+
+    //fun unpause(gid: String, all: Boolean = true) {
+    //    client?.run {
+    //        unpause(gid, all)
+    //        //forceUpdate()
+    //    }
+    //}
 
     fun start(
         activity: Activity,

@@ -8,12 +8,15 @@ import androidx.core.widget.ContentLoadingProgressBar
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.fetchbutton.Aria2Save.getKey
-import com.lagradost.fetchbutton.aria2c.AbstractClient
+import com.lagradost.fetchbutton.Aria2Save.removeKey
+import com.lagradost.fetchbutton.aria2c.*
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.currentDownloadStatus
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.failQueueMap
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.failQueueMapMutex
 import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToGid
 import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToLastRequest
-import com.lagradost.fetchbutton.aria2c.Aria2Starter
-import com.lagradost.fetchbutton.aria2c.DownloadStatusTell
-import com.lagradost.fetchbutton.aria2c.UriRequest
+import kotlinx.coroutines.sync.withLock
+import java.io.File
 
 abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     FrameLayout(context, attributeSet) {
@@ -112,7 +115,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
      * */
     private fun updateViewOnDownloadWithChecks(updateCount: Int) {
         val info = AbstractClient.DownloadListener.getInfo(gid ?: return)
-        files = info.map { it.files }.flatten()
+        files = info.items.map { it.files }.flatten()
 
         updateViewOnDownload(info)
     }
@@ -120,7 +123,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     /**
      * No checks required. Arg will always include a download with current id
      * */
-    abstract fun updateViewOnDownload(status: ArrayList<AbstractClient.JsonTell>)
+    abstract fun updateViewOnDownload(status: Metadata)
 
     /**
      * Look at all global downloads, used to subscribe to one of them.
@@ -157,16 +160,20 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
         }
     }
 
-    fun resumeDownload() {
+    fun resumeDownload(): Boolean {
         setStatus(DownloadStatusTell.Waiting)
         gid?.let { localGid ->
             Aria2Starter.client?.run {
                 unpause(localGid)
                 forceUpdate()
+            }?.also {
+                return true
             }
         } ?: run {
-            performDownload(lastRequest ?: return)
+            performDownload(lastRequest ?: return@run)
+            return false
         }
+        return false
     }
 
     fun redownload() {
@@ -179,12 +186,39 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
         }
     }
 
-    fun cancelDownload() {
-        setStatus(DownloadStatusTell.Waiting)
-        val localGid = gid ?: return
-        Aria2Starter.client?.run {
-            remove(localGid)
-            forceUpdate()
+    fun deleteAllFiles() {
+        // delete files
+        files.map { file -> file.path }.forEach { path ->
+            try {
+                File(path).delete()
+                File("$path.aria2").delete()
+            } catch (_: Throwable) {
+            }
+        }
+
+        // update UI
+        updateViewOnDownload(Metadata(arrayListOf()))
+
+        // remove keys
+        persistentId?.let { pid ->
+            context?.removeKey(pid)
+            gid?.let { localGid ->
+                sessionIdToLastRequest.remove(pid)
+
+                // remove id from session
+                AbstractClient.DownloadListener.remove(localGid, pid)
+
+                // remove aria2
+                Aria2Starter.client?.run {
+                    failQueueMapMutex.withLock {
+                        failQueueMap.remove(localGid)
+                    }
+
+                    currentDownloadStatus.remove(localGid)
+
+                    remove(localGid)
+                }
+            }
         }
     }
 }

@@ -13,9 +13,9 @@
             android:layout_width="80dp"
             android:layout_height="80dp"
             app:aria2c_progress_drawable="@style/Widget.AppCompat.ProgressBar.Horizontal"
-            app:aria2c_fill="small_to_large"
-            app:aria2c_icon_paused="@drawable/download_icon_load"
-            app:aria2c_hide_when_icon="false"
+            app:aria2c_fill="clockwise"
+            app:aria2c_icon_paused="@drawable/netflix_pause"
+            app:aria2c_hide_when_icon="true"
 
             app:aria2c_animate_waiting="false"
             app:layout_constraintBottom_toBottomOf="parent"

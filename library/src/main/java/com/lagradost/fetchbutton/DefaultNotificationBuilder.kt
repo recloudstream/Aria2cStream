@@ -1,5 +1,5 @@
 package com.lagradost.fetchbutton
-/*
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -11,10 +11,9 @@ import android.os.Build
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.core.app.NotificationCompat
+import com.lagradost.fetchbutton.aria2c.DownloadStatusTell
+import com.lagradost.fetchbutton.aria2c.Metadata
 import com.lagradost.fetchbutton.services.VideoDownloadService
-import com.tonyodev.fetch2.Download
-import com.tonyodev.fetch2.DownloadNotification
-import com.tonyodev.fetch2.Status
 
 //const val DOWNLOAD_CHANNEL_ID = "fetch.downloading"
 //const val DOWNLOAD_CHANNEL_NAME = "Downloads"
@@ -27,6 +26,7 @@ enum class DownloadActionType {
 }
 
 data class NotificationMetaData(
+    val id : Long,
     @ColorInt val iconColor: Int,
     val contentTitle: String,
     val subText: String?,
@@ -88,12 +88,12 @@ object DefaultNotificationBuilder {
     fun createNotification(
         context: Context,
         notificationMetaData: NotificationMetaData,
-        download: DownloadNotification,
+        download: Metadata,
         pendingIntent: PendingIntent?,
         inputBuilder: NotificationCompat.Builder? = null
     ): Notification? {
         try {
-            if (download.downloaded <= 0) return null // crash, invalid data
+            if (download.items.isEmpty()) return null // crash, invalid data
             createNotificationChannel(
                 context,
                 context.getString(R.string.download_channel_id),
@@ -117,11 +117,11 @@ object DefaultNotificationBuilder {
                 .setContentTitle(notificationMetaData.contentTitle)
                 .setSmallIcon(
                     when (download.status) {
-                        Status.COMPLETED -> imgDone
-                        Status.DOWNLOADING -> imgDownloading
-                        Status.QUEUED, Status.PAUSED, Status.ADDED -> imgPaused
-                        Status.FAILED -> imgError
-                        Status.REMOVED, Status.CANCELLED, Status.DELETED -> imgStopped
+                        DownloadStatusTell.Complete -> imgDone
+                        DownloadStatusTell.Active -> imgDownloading
+                        DownloadStatusTell.Waiting, DownloadStatusTell.Paused -> imgPaused
+                        DownloadStatusTell.Error -> imgError
+                        DownloadStatusTell.Removed -> imgStopped
                         else -> imgDownloading
                     }
                 )
@@ -134,11 +134,11 @@ object DefaultNotificationBuilder {
                 builder.setContentIntent(pendingIntent)
             }
 
-            if (download.status == Status.DOWNLOADING || download.status == Status.PAUSED) {
-                if (download.progress < 0) {
+            if (download.status == DownloadStatusTell.Active || download.status == DownloadStatusTell.Paused) {
+                if (download.progressPercentage < 0) {
                     builder.setProgress(0, 0, true)
                 } else {
-                    builder.setProgress(100, download.progress, false)
+                    builder.setProgress(100, download.progressPercentage, false)
                 }
             }
 
@@ -149,34 +149,35 @@ object DefaultNotificationBuilder {
                     builder.setLargeIcon(notificationMetaData.posterBitmap)
 
 
-                val progressMbString = "%.1f MB".format(download.total / 1000000f)
-                val totalMbString = "%.1f MB".format(download.total / 1000000f)
+                val progressMbString = "%.1f MB".format(download.downloadedLength / 1000000f)
+                val totalMbString = "%.1f MB".format(download.totalLength / 1000000f)
                 val suffix = ""
 
                 val bigText =
                     when (download.status) {
-                        Status.DOWNLOADING, Status.PAUSED -> {
+                        DownloadStatusTell.Active, DownloadStatusTell.Paused -> {
                             (notificationMetaData.linkName?.let { "$it\n" }
-                                ?: "") + "${notificationMetaData.secondRow}\n${download.progress} % ($progressMbString/$totalMbString)$suffix"
+                                ?: "") + "${notificationMetaData.secondRow}\n${download.progressPercentage} % ($progressMbString/$totalMbString)$suffix"
                         }
-                        Status.FAILED -> {
+                        DownloadStatusTell.Error -> {
                             downloadFormat.format(
                                 context.getString(R.string.download_failed),
                                 notificationMetaData.secondRow
                             )
                         }
-                        Status.COMPLETED -> {
+                        DownloadStatusTell.Complete -> {
                             downloadFormat.format(
                                 context.getString(R.string.download_done),
                                 notificationMetaData.secondRow
                             )
                         }
-                        else -> {
+                        DownloadStatusTell.Removed -> {
                             downloadFormat.format(
                                 context.getString(R.string.download_canceled),
                                 notificationMetaData.secondRow
                             )
                         }
+                        else -> ""
                     }
 
                 val bodyStyle = NotificationCompat.BigTextStyle()
@@ -185,40 +186,41 @@ object DefaultNotificationBuilder {
             } else {
                 val txt =
                     when (download.status) {
-                        Status.DOWNLOADING, Status.PAUSED -> {
+                        DownloadStatusTell.Active, DownloadStatusTell.Paused -> {
                             notificationMetaData.secondRow
                         }
-                        Status.FAILED -> {
+                        DownloadStatusTell.Error -> {
                             downloadFormat.format(
                                 context.getString(R.string.download_failed),
                                 notificationMetaData.secondRow
                             )
                         }
-                        Status.COMPLETED -> {
+                        DownloadStatusTell.Complete -> {
                             downloadFormat.format(
                                 context.getString(R.string.download_done),
                                 notificationMetaData.secondRow
                             )
                         }
-                        else -> {
+                        DownloadStatusTell.Removed -> {
                             downloadFormat.format(
                                 context.getString(R.string.download_canceled),
                                 notificationMetaData.secondRow
                             )
                         }
+                        else -> ""
                     }
 
                 builder.setContentText(txt)
             }
 
-            if ((download.status == Status.DOWNLOADING || download.status == Status.PAUSED) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if ((download.status == DownloadStatusTell.Active || download.status == DownloadStatusTell.Paused) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val actionTypes: MutableList<DownloadActionType> = ArrayList()
-                if (download.status == Status.DOWNLOADING) {
+                if (download.status == DownloadStatusTell.Active) {
                     actionTypes.add(DownloadActionType.Pause)
                     actionTypes.add(DownloadActionType.Stop)
                 }
 
-                if (download.status == Status.PAUSED) {
+                if (download.status == DownloadStatusTell.Paused) {
                     actionTypes.add(DownloadActionType.Resume)
                     actionTypes.add(DownloadActionType.Stop)
                 }
@@ -231,11 +233,11 @@ object DefaultNotificationBuilder {
                         "type", i.ordinal
                     )
 
-                    actionResultIntent.putExtra("id", download.notificationId)
+                    actionResultIntent.putExtra("id", notificationMetaData.id)
 
                     val pending: PendingIntent = PendingIntent.getService(
                         // BECAUSE episodes lying near will have the same id +1, index will give the same requested as the previous episode, *100000 fixes this
-                        context, (4337 + index * 1000000 + download.notificationId),
+                        context, (4337 + index * 1000000 + notificationMetaData.id.toInt()),
                         actionResultIntent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
@@ -261,4 +263,4 @@ object DefaultNotificationBuilder {
             return null
         }
     }
-}*/
+}

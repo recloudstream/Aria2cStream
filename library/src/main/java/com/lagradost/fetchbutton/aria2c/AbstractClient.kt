@@ -9,6 +9,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.fetchbutton.Aria2Save.setKey
 import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.getInfo
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionGidToId
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,6 +47,11 @@ abstract class AbstractClient(
             sessionGidToId[gid] = id
         }
 
+        fun remove(gid: String?, id: Long?) {
+            sessionIdToGid.remove(id ?: sessionGidToId[gid] ?: return)
+            sessionGidToId.remove(gid ?: sessionIdToGid[id] ?: return)
+        }
+
         val sessionIdToLastRequest = hashMapOf<Long, UriRequest>()
 
         //private val currentDownloadDataMutex = Mutex()
@@ -78,14 +84,14 @@ abstract class AbstractClient(
             downloadDataUpdateCount.postValue(new)
         }
 
-        fun getInfo(gid: String): ArrayList<JsonTell> {
+        fun getInfo(gid: String): Metadata {
             val out = ArrayList<JsonTell>()
-            val current = getStatus(gid) ?: return arrayListOf()
+            val current = getStatus(gid) ?: return Metadata(arrayListOf())
             out.add(current)
             for (followers in current.followedBy) {
-                out.addAll(getInfo(followers))
+                out.addAll(getInfo(followers).items)
             }
-            return out
+            return Metadata(out)
         }
 
         // returns if gid was added
@@ -277,7 +283,10 @@ abstract class AbstractClient(
 
     suspend fun forceUpdate() {
         updateMutex.withLock {
-            batchRequestStatus().forEach { resultList ->
+            batchRequestStatus().also {
+                //val list = it.mapNotNull { it.getOrNull()?.results }.flatten()
+
+            }.forEach { resultList ->
                 resultList.getOrNull()?.results?.forEach { json ->
                     // if less then 5% completed and error
                     if (json.status == "error" && json.completedLength * 100L / (json.totalLength + 1) < 5L) {
@@ -290,11 +299,12 @@ abstract class AbstractClient(
                         }
                     }
 
-                    DownloadListener.sessionGidToId[json.gid]?.let { id ->
+                    sessionGidToId[json.gid]?.let { id ->
                         DownloadListener.sessionIdToLastRequest[id]?.let { lastRequest ->
+                            val info = getInfo(json.gid)
                             Aria2Starter.saveActivity.get()?.setKey(
                                 id,
-                                SavedData(lastRequest, getInfo(json.gid).map { it.files }.flatten())
+                                SavedData(lastRequest, info.items.map { it.files }.flatten())
                             )
                         }
                     }
@@ -412,6 +422,9 @@ abstract class AbstractClient(
     private fun createPauseRequest(gid: String): AriaRequest =
         createRequest(Method.PAUSE, gid)
 
+    private fun createRemoveDownloadRequest(gid: String): AriaRequest =
+        createRequest(Method.REMOVE_RESULT, gid)
+
     private fun createUnPauseRequest(gid: String): AriaRequest = createRequest(Method.UNPAUSE, gid)
     private fun createRemoveRequest(gid: String): AriaRequest = createRequest(Method.REMOVE, gid)
 
@@ -424,7 +437,7 @@ abstract class AbstractClient(
 
     suspend fun pauseAsync(gid: String, all: Boolean) {
         if (all) {
-            getInfo(gid)
+            getInfo(gid).items
                 .forEach { item -> sendRaw(createPauseRequest(item.gid)) }
         } else {
             sendRaw(createPauseRequest(gid))
@@ -437,7 +450,7 @@ abstract class AbstractClient(
 
     suspend fun unpauseAsync(gid: String, all: Boolean = true) {
         if (all) {
-            getInfo(gid)
+            getInfo(gid).items
                 .forEach { item -> sendRaw(createUnPauseRequest(item.gid)) }
         } else {
             sendRaw(createUnPauseRequest(gid))
@@ -450,12 +463,64 @@ abstract class AbstractClient(
 
     suspend fun removeAsync(gid: String, all: Boolean = true) {
         if (all) {
-            getInfo(gid)
-                .forEach { item -> sendRaw(createRemoveRequest(item.gid)) }
+            getInfo(gid).items
+                .forEach { item ->
+                    if (sendRaw(createRemoveRequest(item.gid)).isSuccess)
+                        sendRaw(createRemoveDownloadRequest(item.gid))
+                }
         } else {
             sendRaw(createRemoveRequest(gid))
         }
     }
+
+    /*fun deleteAllFiles(id: Long) {
+        removeGid(sessionIdToGid[id])
+        removeId(id)
+    }
+
+    fun deleteAllFiles(gid: String): Boolean {
+        removeId(sessionGidToId[gid])
+        removeGid(gid)
+        return true
+    }
+
+    fun deleteFiles(files: List<JsonFile>) {
+        files.map { file -> file.path }.forEach { path ->
+            try {
+                File(path).delete()
+                File("$path.aria2").delete()
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
+    fun removeGid(gid: String?) {
+        if (gid == null) return
+        val files = getInfo(gid)
+        deleteFiles(files.map { it.files }.flatten())
+        // remove aria2
+        run {
+            DownloadListener.failQueueMapMutex.withLock {
+                DownloadListener.failQueueMap.remove(gid)
+            }
+
+            DownloadListener.currentDownloadStatus.remove(gid)
+
+            remove(gid)
+        }
+
+        // remove id from session
+        DownloadListener.remove(gid, null)
+    }
+
+    fun removeId(pid: Long?) {
+        // delete files
+        DownloadListener.sessionIdToLastRequest.remove(pid ?: return)
+
+        // remove id from session
+        DownloadListener.remove(null, pid)
+    }*/
+
 
     private fun buildRequest(req: AriaRequest): JSONObject {
         val request = JSONObject()
@@ -510,10 +575,11 @@ abstract class AbstractClient(
                         DownloadListener.failQueueMap[localGid] =
                             requests.slice(i until requests.size)
                     }
-                    val localId = requests[i].id
-                    DownloadListener.insert(localGid, localId)
-                    DownloadListener.sessionGidToId[localGid] = localId
-                    DownloadListener.sessionIdToLastRequest[localId] = requests[i]
+                    requests[i].id?.let { localId ->
+                        DownloadListener.insert(localGid, localId)
+                        DownloadListener.sessionIdToLastRequest[localId] = requests[i]
+                    }
+
                     callback.invoke(localGid, i)
                     return@launch
                 }
@@ -527,9 +593,13 @@ abstract class AbstractClient(
             if (result.isFailure) {
                 result.exceptionOrNull()?.printStackTrace()
             }
-            DownloadListener.sessionIdToLastRequest[request.id] = request
+            request.id?.let {
+                DownloadListener.sessionIdToLastRequest[it] = request
+            }
             result.getOrNull()?.let { gid ->
-                DownloadListener.insert(gid, request.id)
+                request.id?.let {
+                    DownloadListener.insert(gid, it)
+                }
                 callback.invoke(gid)
             }
         }
