@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
                     UUID.randomUUID().toString(),
                     4337,
                     filesDir.path,
-                    "${filesDir.path}/session"
+                    //"${filesDir.path}/session"
                 )
             )
         }

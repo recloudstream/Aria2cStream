@@ -76,6 +76,9 @@ data class NotificationMetaData(
 
 object DefaultNotificationBuilder {
     @DrawableRes
+    var imgWaiting = R.drawable.download_icon_load
+
+    @DrawableRes
     var imgDone = R.drawable.download_icon_done
 
     @DrawableRes
@@ -99,12 +102,16 @@ object DefaultNotificationBuilder {
     @DrawableRes
     var pressToStopIcon = R.drawable.ic_baseline_stop_24
 
+
+    private var hasCreatedNotificationChannel = false
     private fun createNotificationChannel(
         context: Context,
         channelId: String,
         channelName: String,
         channelDescription: String
     ) {
+        if (hasCreatedNotificationChannel) return
+        hasCreatedNotificationChannel = true
         // Create the NotificationChannel, but only on API 26+ because
         // the NotificationChannel class is new and not in the support library
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -138,6 +145,8 @@ object DefaultNotificationBuilder {
     ): NotificationData? {
         try {
             if (download.items.isEmpty()) return null // crash, invalid data
+            // if(download.status == DownloadStatusTell.Waiting) return null
+
             createNotificationChannel(
                 context,
                 context.getString(R.string.download_channel_id),
@@ -163,9 +172,10 @@ object DefaultNotificationBuilder {
                     when (download.status) {
                         DownloadStatusTell.Complete -> imgDone
                         DownloadStatusTell.Active -> imgDownloading
-                        DownloadStatusTell.Waiting, DownloadStatusTell.Paused -> imgPaused
+                        DownloadStatusTell.Paused -> imgPaused
                         DownloadStatusTell.Error -> imgError
                         DownloadStatusTell.Removed -> imgStopped
+                        DownloadStatusTell.Waiting -> imgWaiting
                         else -> imgDownloading
                     }
                 )
@@ -178,8 +188,11 @@ object DefaultNotificationBuilder {
                 builder.setContentIntent(pendingIntent)
             }
 
-            if (download.status == DownloadStatusTell.Active || download.status == DownloadStatusTell.Paused) {
-                if (download.progressPercentage < 0) {
+            if (download.status == DownloadStatusTell.Active
+                || download.status == DownloadStatusTell.Paused
+                || download.status == DownloadStatusTell.Waiting
+            ) {
+                if (download.downloadedLength <= 1024 || download.status == DownloadStatusTell.Waiting) {
                     builder.setProgress(0, 0, true)
                 } else {
                     builder.setProgress(100, download.progressPercentage, false)
@@ -187,21 +200,29 @@ object DefaultNotificationBuilder {
             }
 
             val downloadFormat = context.getString(R.string.download_format)
+            val downloadProgressFormat = context.getString(R.string.download_progress_format)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val posterBitmap = notificationMetaData.posterBitmap
                 if (posterBitmap != null)
                     builder.setLargeIcon(posterBitmap)
 
-                val progressMbString = "%.1f MB".format(download.downloadedLength / 1000000f)
-                val totalMbString = "%.1f MB".format(download.totalLength / 1000000f)
-                val suffix = ""
+                val progressMb = download.downloadedLength / 1000000f
+                val totalMb = download.totalLength / 1000000f
+                val downloadSpeedMb = download.downloadSpeed / 1000000f
 
                 val bigText =
                     when (download.status) {
                         DownloadStatusTell.Active, DownloadStatusTell.Paused -> {
                             (notificationMetaData.linkName?.let { "$it\n" }
-                                ?: "") + "${notificationMetaData.secondRow}\n${download.progressPercentage} % ($progressMbString/$totalMbString)$suffix"
+                                ?: "") +
+                                    downloadProgressFormat.format(
+                                        notificationMetaData.secondRow,
+                                        download.progressPercentage,
+                                        progressMb,
+                                        totalMb,
+                                        downloadSpeedMb
+                                    )
                         }
                         DownloadStatusTell.Error -> {
                             downloadFormat.format(

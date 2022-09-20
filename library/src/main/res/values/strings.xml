@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="download_format" translatable="false">%s - %s</string>
+    <string name="download_format" translatable="false" formatted="true">%s - %s</string>
+    <string name="download_progress_format" translatable="false" formatted="true">%s\n%d %% (%.1f MB/%.1f MB) %.1f MB/s</string>
     <string name="download_paused">Download Paused</string>
     <!--<string name="download_started">Download Started</string>-->
     <string name="download_failed">Download Failed</string>

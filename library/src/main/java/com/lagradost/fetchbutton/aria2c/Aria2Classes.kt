@@ -181,6 +181,7 @@ data class Metadata(
     val totalLength by lazy { items.sumOf { it.totalLength } }
     val downloadedLength by lazy { items.sumOf { it.completedLength } }
     val progressPercentage by lazy { (downloadedLength * 100L / (totalLength + 1L)).toInt() }
+    val downloadSpeed by lazy { items.sumOf { it.downloadSpeed } }
 }
 
 fun getStatus(status: ArrayList<AbstractClient.JsonTell>): DownloadStatusTell? {

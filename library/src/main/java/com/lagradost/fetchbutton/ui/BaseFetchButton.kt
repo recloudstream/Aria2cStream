@@ -164,8 +164,24 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
                 return true
             }
         } ?: run {
+            //val req = lastRequest ?: return@run
+            //var hasAny = false
+            //for (file in files) {
+            //    try {
+            //        val filePath = file.path + ".aria2"
+            //        val f = File(filePath)
+            //        if (f.exists()) {
+            //            performDownload(req.copy(uris = listOf(filePath)))
+            //            hasAny = true
+            //        }
+            //    } catch (e: Exception) {
+            //        println(e)
+            //    }
+            //}
+            //
+            //if (!hasAny)
             performDownload(lastRequest ?: return@run)
-            return false
+            return true
         }
         return false
     }

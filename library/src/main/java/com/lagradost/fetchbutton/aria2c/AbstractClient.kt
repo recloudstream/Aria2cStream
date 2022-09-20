@@ -616,6 +616,7 @@ abstract class AbstractClient(
     }
 
     fun download(request: UriRequest, callback: (String) -> Unit) {
+        println("REQUESTED: ${request.uris}")
         scope.launch {
             val result = sendUri(request)
             if (result.isFailure) {
