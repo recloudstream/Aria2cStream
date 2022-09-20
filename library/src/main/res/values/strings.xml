@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="download_format" translatable="false">%s - %s</string>
     <string name="download_paused">Download Paused</string>
-    <string name="download_started">Download Started</string>
+    <!--<string name="download_started">Download Started</string>-->
     <string name="download_failed">Download Failed</string>
     <string name="download_canceled">Download Canceled</string>
     <string name="download_done">Download Done</string>
-    <string name="download_format" translatable="false">%s - %s</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>
     <string name="cancel">Cancel</string>
-    <string name="download_channel_id">Cancel</string>
-    <string name="download_channel_name">Cancel</string>
-    <string name="download_channel_description">Cancel</string>
+    <string name="download_channel_id">Download</string>
+    <string name="download_channel_name">Download channel</string>
+    <string name="download_channel_description">Download notifications</string>
+    <!---->
 </resources>

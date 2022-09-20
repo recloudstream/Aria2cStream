@@ -3,6 +3,7 @@
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         tools:background="@android:color/holo_blue_light">
 
     <androidx.core.widget.ContentLoadingProgressBar
@@ -28,7 +29,7 @@
             android:background="@drawable/circle_shape_dotted" />
 
     <ImageView
-            tools:visibility="gone"
+            tools:visibility="visible"
             android:id="@+id/image_download_status"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -36,6 +37,7 @@
             android:layout_marginStart="10dp"
             android:layout_marginEnd="10dp"
             android:padding="2dp"
+            app:tint="?attr/aria2c_icon_color"
             android:src="@drawable/ic_baseline_play_arrow_24"
             android:visibility="visible" />
 </FrameLayout>

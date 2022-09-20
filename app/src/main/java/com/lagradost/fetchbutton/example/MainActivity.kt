@@ -8,10 +8,15 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
-import com.lagradost.fetchbutton.aria2c.*
+import com.lagradost.fetchbutton.NotificationMetaData
+import com.lagradost.fetchbutton.aria2c.Aria2Settings
+import com.lagradost.fetchbutton.aria2c.Aria2Starter
+import com.lagradost.fetchbutton.aria2c.DownloadStatusTell
+import com.lagradost.fetchbutton.aria2c.newUriRequest
 import com.lagradost.fetchbutton.ui.PieFetchButton
 import java.util.*
 import kotlin.concurrent.thread
+
 
 /**id, stringRes */
 @SuppressLint("RestrictedApi")
@@ -53,13 +58,26 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         }
-        val path = this.filesDir.path + "/FetchButtonTest/test.bin"
 
-        AbstractClient.DownloadListener.observe(this) {
+        val pId = 1L
+        downloadButton.setPersistentId(pId)
 
-        }
+        //val image = BitmapFactory.decodeResource(resources, R.drawable.example_poster)
 
-        downloadButton.setPersistentId(1)
+        val uriReq = newUriRequest(
+            pId, "https://speed.hetzner.de/100MB.bin", "Hello World",
+            notificationMetaData = NotificationMetaData(
+                pId.toInt(),
+                0xFF0000,
+                "contentTitle",
+                "Subtext",
+                "row2Extra",
+                "https://www.royalroadcdn.com/public/covers-full/36735-the-perfect-run.jpg",
+                "SpeedTest",
+                "secondRow"
+            )
+        )
+
         downloadButton.setOnClickListener { view ->
             if (view !is PieFetchButton) return@setOnClickListener
             val id = view.persistentId
@@ -67,19 +85,15 @@ class MainActivity : AppCompatActivity() {
                 null, DownloadStatusTell.Removed -> {
                     view.setStatus(DownloadStatusTell.Waiting)
                     Aria2Starter.download(
-                        newUriRequest(
-                            id, "https://speed.hetzner.de/100MB.bin", "Hello World",
-                        )
+                        uriReq
                     )
                 }
                 DownloadStatusTell.Paused -> {
                     view.popupMenuNoIcons(listOf(1 to "Resume", 2 to "Play Files", 3 to "Delete")) {
                         when (itemId) {
-                            1 -> if(!view.resumeDownload()) {
+                            1 -> if (!view.resumeDownload()) {
                                 Aria2Starter.download(
-                                    newUriRequest(
-                                        id, "https://speed.hetzner.de/100MB.bin", "Hello World",
-                                    )
+                                    uriReq
                                 )
                             }
                             2 -> {
@@ -111,6 +125,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 DownloadStatusTell.Error -> {
                     view.redownload()
+                }
+                DownloadStatusTell.Waiting -> {
+                    println("REMOVED")
                 }
                 else -> {}
             }

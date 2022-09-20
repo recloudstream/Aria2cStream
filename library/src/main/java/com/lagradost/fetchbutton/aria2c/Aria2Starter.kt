@@ -2,6 +2,8 @@ package com.lagradost.fetchbutton.aria2c
 
 import android.app.Activity
 import android.util.Log
+import com.lagradost.fetchbutton.Aria2Save.removeKey
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.lang.ref.WeakReference
 
@@ -40,19 +42,62 @@ object Aria2Starter {
         client?.downloadFailQueue(requests.toList()) { _, _ -> }
     }
 
-    //fun pause(gid: String, all: Boolean = true) {
-    //    client?.run {
-    //        pause(gid, all)
-    //        //forceUpdate()
-    //    }
-    //}
+    fun pause(gid: String, all: Boolean = true) {
+        client?.run {
+            pause(gid, all)
+        }
+    }
 
-    //fun unpause(gid: String, all: Boolean = true) {
-    //    client?.run {
-    //        unpause(gid, all)
-    //        //forceUpdate()
-    //    }
-    //}
+    fun unpause(gid: String, all: Boolean = true) {
+        client?.run {
+            unpause(gid, all)
+            //forceUpdate()
+        }
+    }
+
+    fun deleteFiles(files: List<AbstractClient.JsonFile>) {
+        files.map { file -> file.path }.forEach { path ->
+            try {
+                File(path).delete()
+                File("$path.aria2").delete()
+            } catch (_: Throwable) {
+            }
+        }
+    }
+
+    fun delete(gid: String?, id: Long?, files: List<AbstractClient.JsonFile> = emptyList()) {
+        // delete files
+        if (files.isEmpty()) {
+            gid?.let { localGid ->
+                deleteFiles(AbstractClient.DownloadListener.getInfo(localGid).items.map { it.files }
+                    .flatten())
+            }
+        } else {
+            deleteFiles(files)
+        }
+
+        // remove keys
+        id?.let { pid ->
+            saveActivity.get()?.removeKey(pid)
+            gid?.let { localGid ->
+                AbstractClient.DownloadListener.sessionIdToLastRequest.remove(pid)
+
+                // remove id from session
+                AbstractClient.DownloadListener.remove(localGid, pid)
+
+                // remove aria2
+                Aria2Starter.client?.run {
+                    AbstractClient.DownloadListener.failQueueMapMutex.withLock {
+                        AbstractClient.DownloadListener.failQueueMap.remove(localGid)
+                    }
+
+                    AbstractClient.DownloadListener.currentDownloadStatus.remove(localGid)
+
+                    remove(localGid)
+                }
+            }
+        }
+    }
 
     fun start(
         activity: Activity,

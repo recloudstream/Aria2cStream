@@ -2,7 +2,7 @@
 <resources>
     <!--https://developer.android.com/develop/ui/views/layout/custom-views/create-view#customattr-->
     <declare-styleable name="PieFetchButton">
-        <attr name="aria2c_view" format="reference" />
+        <attr name="aria2c_layout" format="reference" />
         <attr name="aria2c_background_progress" format="reference" />
         <attr name="aria2c_outline_active" format="reference" />
         <attr name="aria2c_outline_non_active" format="reference" />
@@ -11,6 +11,8 @@
         <attr name="aria2c_animate_waiting" format="boolean" />
         <attr name="aria2c_fill_color" format="color" />
         <attr name="aria2c_outline_color" format="color" />
+        <attr name="aria2c_icon_color" format="color" />
+
         <attr name="aria2c_fill" format="enum">
             <enum name="clockwise" value="0" />
             <enum name="counter_clockwise" value="1" />

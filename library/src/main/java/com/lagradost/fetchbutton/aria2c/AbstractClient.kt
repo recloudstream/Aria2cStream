@@ -1,5 +1,6 @@
 package com.lagradost.fetchbutton.aria2c
 
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -8,8 +9,11 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.fetchbutton.Aria2Save.setKey
+import com.lagradost.fetchbutton.DefaultNotificationBuilder
 import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.getInfo
 import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionGidToId
+import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToLastRequest
+import com.lagradost.fetchbutton.utils.Coroutines.mainThread
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -53,6 +57,7 @@ abstract class AbstractClient(
         }
 
         val sessionIdToLastRequest = hashMapOf<Long, UriRequest>()
+        //val sessionGIdToNotification = hashMapOf<String, NotificationMetaData>()
 
         //private val currentDownloadDataMutex = Mutex()
 
@@ -281,12 +286,24 @@ abstract class AbstractClient(
         block.invoke(this@AbstractClient)
     }
 
+    private fun pushNotifications(notifications: List<DefaultNotificationBuilder.NotificationData>) =
+        mainThread {
+            with(
+                NotificationManagerCompat.from(
+                    Aria2Starter.saveActivity.get() ?: return@mainThread
+                )
+            ) {
+                // notificationId is a unique int for each notification that you must define
+                for (not in notifications) {
+                    notify(not.id, not.notification)
+                }
+            }
+        }
+
     suspend fun forceUpdate() {
         updateMutex.withLock {
-            batchRequestStatus().also {
-                //val list = it.mapNotNull { it.getOrNull()?.results }.flatten()
-
-            }.forEach { resultList ->
+            val notifications = ArrayList<DefaultNotificationBuilder.NotificationData>()
+            batchRequestStatus().forEach { resultList ->
                 resultList.getOrNull()?.results?.forEach { json ->
                     // if less then 5% completed and error
                     if (json.status == "error" && json.completedLength * 100L / (json.totalLength + 1) < 5L) {
@@ -298,21 +315,32 @@ abstract class AbstractClient(
                             }
                         }
                     }
+                    DownloadListener.currentDownloadStatus[json.gid] = json
 
-                    sessionGidToId[json.gid]?.let { id ->
-                        DownloadListener.sessionIdToLastRequest[id]?.let { lastRequest ->
-                            val info = getInfo(json.gid)
-                            Aria2Starter.saveActivity.get()?.setKey(
-                                id,
-                                SavedData(lastRequest, info.items.map { it.files }.flatten())
-                            )
+                    Aria2Starter.saveActivity.get()?.apply {
+                        sessionGidToId[json.gid]?.let { id ->
+                            sessionIdToLastRequest[id]?.let { lastRequest ->
+                                lastRequest.notificationMetaData?.let { notificationMetaData ->
+                                    DefaultNotificationBuilder.createNotification(
+                                        this,
+                                        notificationMetaData,
+                                        getInfo(json.gid),
+                                        null, gid = json.gid, id = id
+                                    )?.let { notifications.add(it) }
+                                }
+
+                                val info = getInfo(json.gid)
+                                setKey(
+                                    id,
+                                    SavedData(lastRequest, info.items.map { it.files }.flatten())
+                                )
+                            }
                         }
                     }
-
-                    DownloadListener.currentDownloadStatus[json.gid] = json
                 }
             }
             DownloadListener.addCount(++updateCount)
+            pushNotifications(notifications)
         }
     }
 
@@ -577,7 +605,7 @@ abstract class AbstractClient(
                     }
                     requests[i].id?.let { localId ->
                         DownloadListener.insert(localGid, localId)
-                        DownloadListener.sessionIdToLastRequest[localId] = requests[i]
+                        sessionIdToLastRequest[localId] = requests[i]
                     }
 
                     callback.invoke(localGid, i)
@@ -594,7 +622,7 @@ abstract class AbstractClient(
                 result.exceptionOrNull()?.printStackTrace()
             }
             request.id?.let {
-                DownloadListener.sessionIdToLastRequest[it] = request
+                sessionIdToLastRequest[it] = request
             }
             result.getOrNull()?.let { gid ->
                 request.id?.let {

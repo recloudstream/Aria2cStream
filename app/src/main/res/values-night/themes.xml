@@ -10,8 +10,9 @@
         <item name="colorSecondaryVariant">@color/teal_200</item>
         <item name="colorOnSecondary">@color/black</item>
         <!--<item name="aria2c_fill_color">#80111111</item>-->
-        <item name="aria2c_fill_color">#A50000</item>
-        <item name="aria2c_outline_color">@color/black</item>
+        <item name="aria2c_fill_color">@color/white</item>
+        <item name="aria2c_outline_color">@color/white</item>
+        <item name="aria2c_icon_color">@color/white</item>
 
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>

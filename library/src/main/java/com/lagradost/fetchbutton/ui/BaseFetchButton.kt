@@ -8,15 +8,9 @@ import androidx.core.widget.ContentLoadingProgressBar
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.fetchbutton.Aria2Save.getKey
-import com.lagradost.fetchbutton.Aria2Save.removeKey
 import com.lagradost.fetchbutton.aria2c.*
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.currentDownloadStatus
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.failQueueMap
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.failQueueMapMutex
 import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToGid
 import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToLastRequest
-import kotlinx.coroutines.sync.withLock
-import java.io.File
 
 abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     FrameLayout(context, attributeSet) {
@@ -123,7 +117,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     /**
      * No checks required. Arg will always include a download with current id
      * */
-    abstract fun updateViewOnDownload(status: Metadata)
+    abstract fun updateViewOnDownload(metadata: Metadata)
 
     /**
      * Look at all global downloads, used to subscribe to one of them.
@@ -187,38 +181,9 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     }
 
     fun deleteAllFiles() {
-        // delete files
-        files.map { file -> file.path }.forEach { path ->
-            try {
-                File(path).delete()
-                File("$path.aria2").delete()
-            } catch (_: Throwable) {
-            }
-        }
+        Aria2Starter.delete(gid, persistentId, files)
 
         // update UI
         updateViewOnDownload(Metadata(arrayListOf()))
-
-        // remove keys
-        persistentId?.let { pid ->
-            context?.removeKey(pid)
-            gid?.let { localGid ->
-                sessionIdToLastRequest.remove(pid)
-
-                // remove id from session
-                AbstractClient.DownloadListener.remove(localGid, pid)
-
-                // remove aria2
-                Aria2Starter.client?.run {
-                    failQueueMapMutex.withLock {
-                        failQueueMap.remove(localGid)
-                    }
-
-                    currentDownloadStatus.remove(localGid)
-
-                    remove(localGid)
-                }
-            }
-        }
     }
 }

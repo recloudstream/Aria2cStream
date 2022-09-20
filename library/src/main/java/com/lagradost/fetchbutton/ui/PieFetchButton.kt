@@ -18,19 +18,20 @@ import com.lagradost.fetchbutton.utils.Coroutines.ioThread
 
 open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     BaseFetchButton(context, attributeSet) {
-    var waitingAnimation: Int = 0
-    var animateWaiting: Boolean = false
-    var activeOutline: Int = 0
-    var nonActiveOutline: Int = 0
 
-    var iconInit: Int = 0
-    var iconError: Int = 0
-    var iconComplete: Int = 0
-    var iconActive: Int = 0
-    var iconWaiting: Int = 0
-    var iconRemoved: Int = 0
-    var iconPaused: Int = 0
-    var hideWhenIcon: Boolean = true
+    private var waitingAnimation: Int = 0
+    private var animateWaiting: Boolean = false
+    private var activeOutline: Int = 0
+    private var nonActiveOutline: Int = 0
+
+    private var iconInit: Int = 0
+    private var iconError: Int = 0
+    private var iconComplete: Int = 0
+    private var iconActive: Int = 0
+    private var iconWaiting: Int = 0
+    private var iconRemoved: Int = 0
+    private var iconPaused: Int = 0
+    private var hideWhenIcon: Boolean = true
 
     companion object {
         val fillArray = arrayOf(
@@ -84,7 +85,7 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
         context.obtainStyledAttributes(attributeSet, R.styleable.PieFetchButton, 0, 0).apply {
             inflate(
                 getResourceId(
-                    R.styleable.PieFetchButton_aria2c_view,
+                    R.styleable.PieFetchButton_aria2c_layout,
                     R.layout.download_button_view
                 )
             )
