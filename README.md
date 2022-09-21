@@ -2,7 +2,7 @@
 
 #### [Work in progress]
 
-https://jitpack.io/#LagradOst/Aria2cButton/
+[![](https://jitpack.io/v/LagradOst/Aria2cButton.svg)](https://jitpack.io/#LagradOst/Aria2cButton)
 
 Just a simple library to have a download button which works with Aria2c. Mostly for personal usage.
 
@@ -12,6 +12,13 @@ TODO:
 - [x] More default download buttons
 
 ### Usage:
+You should declare these in your style, or else it will crash when inflating the view
+```
+<item name="aria2c_icon_color">?attr/white</item>
+<item name="aria2c_fill_color">?attr/white</item>
+<item name="aria2c_outline_color">?attr/white</item>
+```
+
 ```xml
 <com.lagradost.fetchbutton.ui.PieFetchButton
     android:id="@+id/download_button"
