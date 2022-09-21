@@ -78,6 +78,10 @@ class MainActivity : AppCompatActivity() {
             )
         )
 
+        //downloadButton.setDefaultClickListener {
+        //    listOf(uriReq)
+        //}
+
         downloadButton.setOnClickListener { view ->
             if (view !is PieFetchButton) return@setOnClickListener
             val id = view.persistentId

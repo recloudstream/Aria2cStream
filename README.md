@@ -2,12 +2,14 @@
 
 #### [Work in progress]
 
-Just a simple library to have a download button which works with Fetch. Mostly for personal usage.
+https://jitpack.io/#LagradOst/Aria2cButton/
+
+Just a simple library to have a download button which works with Aria2c. Mostly for personal usage.
 
 TODO:
-- [ ] Themeable/Attributes
+- [x] Themeable/Attributes
 - [ ] Testing with recyclerview
-- [ ] More default download buttons
+- [x] More default download buttons
 
 ### Usage:
 ```xml
@@ -21,20 +23,40 @@ TODO:
 ```kotlin
 val downloadButton = findViewById<PieFetchButton>(R.id.download_button)
 
-// This is required to run once in the app before any fetch usage.
-initFetch(this)
+// This is required to run once in the app before any aria2c usage.
+thread {
+	Aria2Starter.start(
+		this,
+		Aria2Settings(
+			UUID.randomUUID().toString(),
+			4337,
+			filesDir.path,
+			"${filesDir.path}/session"
+		)
+	)
+}
+
+// this is used to store data for resuming next app launch
+downloadButton.setPersistentId(pId) 
 
 // Arbitrary path
-val path = this.filesDir.path + "/FetchButtonTest/test.bin"
+val uriReq = newUriRequest(
+    pId, "https://speed.hetzner.de/100MB.bin", "Hello World",
+    notificationMetaData = NotificationMetaData(
+        pId.toInt(), 
+        0xFF0000,
+        "contentTitle",
+        "Subtext",
+        "row2Extra",
+        "https://www.royalroadcdn.com/public/covers-full/36735-the-perfect-run.jpg",
+        "SpeedTest",
+        "secondRow"
+    )
+)
 
 // This is just to play around with the default behavior, use
 // downloadButton.pauseDownload() and such to control the download easily
-// To subscribe to another download, just use downloadButton.currentRequestId = fetchRequestId
-downloadButton.setDefaultClickListener {
-    com.tonyodev.fetch2.Request(
-        // Download url
-        "https://speedtest-co.turnkeyinternet.net/1000mb.bin",
-        path,
-    )
+downloadButton.setDefaultClickListener { 
+    listOf(uriReq)
 }
 ```
