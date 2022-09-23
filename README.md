@@ -17,6 +17,7 @@ You should declare these in your style, or else it will crash when inflating the
 <item name="aria2c_icon_color">?attr/white</item>
 <item name="aria2c_fill_color">?attr/white</item>
 <item name="aria2c_outline_color">?attr/white</item>
+<item name="aria2c_icon_scale">1.0</item>
 ```
 
 ```xml
