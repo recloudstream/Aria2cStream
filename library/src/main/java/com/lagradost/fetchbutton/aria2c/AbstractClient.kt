@@ -1,8 +1,6 @@
 package com.lagradost.fetchbutton.aria2c
 
 import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.MutableLiveData
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
@@ -10,9 +8,9 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.lagradost.fetchbutton.Aria2Save.setKey
 import com.lagradost.fetchbutton.DefaultNotificationBuilder
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.getInfo
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionGidToId
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToLastRequest
+import com.lagradost.fetchbutton.aria2c.DownloadListener.getInfo
+import com.lagradost.fetchbutton.aria2c.DownloadListener.sessionGidToId
+import com.lagradost.fetchbutton.aria2c.DownloadListener.sessionIdToLastRequest
 import com.lagradost.fetchbutton.utils.Coroutines.mainThread
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -40,84 +38,6 @@ abstract class AbstractClient(
         val statusUpdateRateMs: Long,
     )
 
-    object DownloadListener {
-        //private val currentDownloadData: HashMap<String, DownloadStatus> = hashMapOf()
-        private val downloadDataUpdateCount = MutableLiveData<Int>()
-        val sessionIdToGid = hashMapOf<Long, String>()
-        val sessionGidToId = hashMapOf<String, Long>()
-
-        fun insert(gid: String, id: Long) {
-            sessionIdToGid[id] = gid
-            sessionGidToId[gid] = id
-        }
-
-        fun remove(gid: String?, id: Long?) {
-            sessionIdToGid.remove(id ?: sessionGidToId[gid] ?: return)
-            sessionGidToId.remove(gid ?: sessionIdToGid[id] ?: return)
-        }
-
-        val sessionIdToLastRequest = hashMapOf<Long, UriRequest>()
-        //val sessionGIdToNotification = hashMapOf<String, NotificationMetaData>()
-
-        //private val currentDownloadDataMutex = Mutex()
-
-        val currentDownloadStatus: HashMap<String, JsonTell> = hashMapOf()
-
-        // this points to the parent gid
-        //val follow: HashMap<String, String> = hashMapOf()
-
-        private fun getStatus(gid: String): JsonTell? {
-            return currentDownloadStatus[gid]
-        }
-
-        val failQueueMap = hashMapOf<String, List<UriRequest>>()
-        val failQueueMapMutex = Mutex()
-
-        fun observe(scope: LifecycleOwner, collector: (Int) -> Unit) {
-            CoroutineScope(Dispatchers.Main).launch {
-                downloadDataUpdateCount.observe(scope) {
-                    collector(it)
-                }
-            }
-        }
-
-        //fun getDownloadStatus(gid: String): DownloadStatus? {
-        //    return currentDownloadData[gid]
-        //}
-
-        fun addCount(new: Int) {
-            downloadDataUpdateCount.postValue(new)
-        }
-
-        fun getInfo(gid: String): Metadata {
-            val out = ArrayList<JsonTell>()
-            val current = getStatus(gid) ?: return Metadata(arrayListOf())
-            out.add(current)
-            for (followers in current.followedBy) {
-                out.addAll(getInfo(followers).items)
-            }
-            return Metadata(out)
-        }
-
-        // returns if gid was added
-        /*suspend fun insertGid(gid: String): Boolean {
-            gidMutex.withLock {
-                if (gids.contains(gid)) {
-                    return false
-                } else {
-                    gids += gid
-                    return true
-                }
-            }
-        }*/
-
-        //suspend fun setDownloadStatus(gid: String, status: DownloadStatus) {
-        //    currentDownloadDataMutex.lock {
-        //        currentDownloadData[gid] = status
-        //    }
-        //    // return insertGid(gid)
-        //}
-    }
 
     protected val scope = CoroutineScope(Job() + Dispatchers.IO)
 
@@ -137,15 +57,59 @@ abstract class AbstractClient(
 
     enum class Method(val methodName: String) {
         MULTI_CALL("system.multicall"),
+
+        /** This method shuts down aria2. This method returns OK.*/
         SHUT_DOWN("aria2.shutdown"),
+
+        /** This method returns the progress of the download denoted by gid (string).
+         * keys is an array of strings. If specified, the response contains only keys
+         * in the keys array. If keys is empty or omitted, the response contains all keys.
+         * This is useful when you just want specific keys and avoid unnecessary transfers.
+         * For example, aria2.tellStatus("2089b05ecca3d829", ["gid", "status"]) returns the
+         * gid and status keys only. The response is a struct and contains following keys.
+         * Values are strings.*/
         TELL_STATUS("aria2.tellStatus"),
         TELL_ACTIVE("aria2.tellActive"),
+
+        /** This method returns a list of waiting downloads, including paused ones.
+         * offset is an integer and specifies the offset from the download waiting at the
+         * front. num is an integer and specifies the max. number of downloads to be returned.
+         * For the keys parameter, please refer to the aria2.tellStatus() method.
+        If offset is a positive integer, this method returns downloads in the range of
+        [offset, offset + num).
+        offset can be a negative integer. offset == -1 points last download in the waiting
+        queue and offset == -2 points the download before the last download, and so on.
+        Downloads in the response are in reversed order then.
+        For example, imagine three downloads "A","B" and "C" are waiting in this order.
+        aria2.tellWaiting(0, 1) returns ["A"]. aria2.tellWaiting(1, 2) returns ["B", "C"].
+        aria2.tellWaiting(-1, 2) returns ["C", "B"].
+        The response is an array of the same structs as returned by aria2.tellStatus() method.
+         */
         TELL_WAITING("aria2.tellWaiting"),
+
+        /**
+         *This method returns a list of stopped downloads. offset is an integer and specifies
+         * the offset from the least recently stopped download. num is an integer and specifies
+         * the max. number of downloads to be returned. For the keys parameter, please refer to
+         * the aria2.tellStatus() method.
+        offset and num have the same semantics as described in the aria2.tellWaiting() method.
+        The response is an array of the same structs as returned by the aria2.tellStatus() method.
+         */
         TELL_STOPPED("aria2.tellStopped"),
+
+        /** This method changes the status of the download denoted by gid (string) from paused to waiting,
+         * making the download eligible to be restarted. This method returns the GID of the unpaused download.*/
         UNPAUSE("aria2.unpause"),
+
+        /** This method removes the download denoted by gid (string). If the specified download is in progress,
+         * it is first stopped. The status of the removed download becomes removed. This method returns GID
+         * of removed download.*/
         REMOVE("aria2.remove"),
         FORCE_PAUSE("aria2.forcePause"),
         FORCE_REMOVE("aria2.forceRemove"),
+
+        /** This method removes a completed/error/removed download denoted by gid from memory.
+         * This method returns OK for success.*/
         REMOVE_RESULT("aria2.removeDownloadResult"),
         GET_VERSION("aria2.getVersion"),
         PAUSE_ALL("aria2.pauseAll"),
@@ -154,11 +118,26 @@ abstract class AbstractClient(
         UNPAUSE_ALL("aria2.unpauseAll"),
         FORCE_PAUSE_ALL("aria2.forcePauseAll"),
         PURGE_DOWNLOAD_RESULTS("aria2.purgeDownloadResult"),
+
+        /** This method pauses the download denoted by gid (string). The status of paused download
+         * becomes paused. If the download was active, the download is placed in the front of waiting
+         * queue. While the status is paused, the download is not started. To change status to waiting,
+         * use the aria2.unpause() method. This method returns GID of paused download.*/
         PAUSE("aria2.pause"),
         LIST_METHODS("system.listMethods"),
         GET_GLOBAL_STATS("aria2.getGlobalStat"),
         GET_GLOBAL_OPTIONS("aria2.getGlobalOption"),
         CHANGE_GLOBAL_OPTIONS("aria2.changeGlobalOption"),
+
+        /**This method adds a new download. uris is an array of HTTP/FTP/SFTP/BitTorrent URIs (strings)
+         * pointing to the same resource. If you mix URIs pointing to different resources, then the
+         * download may fail or be corrupted without aria2 complaining. When adding BitTorrent
+         * Magnet URIs, uris must have only one element and it should be BitTorrent Magnet URI.
+         * options is a struct and its members are pairs of option name and value. See Options below
+         * for more details. If position is given, it must be an integer starting from 0. The new download
+         * will be inserted at position in the waiting queue. If position is omitted or position is larger
+         * than the current size of the queue, the new download is appended to the end of the queue.
+         * This method returns the GID of the newly registered download.*/
         ADD_URI("aria2.addUri"),
         ADD_TORRENT("aria2.addTorrent"),
         ADD_METALINK("aria2.addMetalink"),
@@ -249,7 +228,8 @@ abstract class AbstractClient(
         /** The reverse link for followedBy. A download included in followedBy has this object's GID
          * in its following value.*/
         @JsonProperty("following") val following: String?,
-        /** getDownloadStatusFromTell for enum, active for currently downloading/seeding downloads. waiting for downloads in the queue;
+        /** getDownloadStatusFromTell for enum, active for currently downloading/seeding downloads.
+         * waiting for downloads in the queue;
          * download is not started. paused for paused downloads. error for downloads that were stopped
          * because of error. complete for stopped and completed downloads. removed for the downloads
          * removed by user.*/
@@ -320,13 +300,20 @@ abstract class AbstractClient(
                     Aria2Starter.saveActivity.get()?.apply {
                         sessionGidToId[json.gid]?.let { id ->
                             sessionIdToLastRequest[id]?.let { lastRequest ->
+                                val ginfo = getInfo(json.gid)
                                 lastRequest.notificationMetaData?.let { notificationMetaData ->
                                     DefaultNotificationBuilder.createNotification(
                                         this,
                                         notificationMetaData,
-                                        getInfo(json.gid),
+                                        ginfo,
                                         null, gid = json.gid, id = id
                                     )?.let { notifications.add(it) }
+                                }
+
+                                if (ginfo.status == DownloadStatusTell.Complete
+                                    || ginfo.status == DownloadStatusTell.Error
+                                ) {
+                                    removeIdAsync(json.gid, all = false)
                                 }
 
                                 val info = getInfo(json.gid)
@@ -489,6 +476,17 @@ abstract class AbstractClient(
         removeAsync(gid, all)
     }
 
+    suspend fun removeIdAsync(gid: String, all: Boolean = true) {
+        if (all) {
+            getInfo(gid).items
+                .forEach { item ->
+                    sendRaw(createRemoveDownloadRequest(item.gid))
+                }
+        } else {
+            sendRaw(createRemoveDownloadRequest(gid))
+        }
+    }
+
     suspend fun removeAsync(gid: String, all: Boolean = true) {
         if (all) {
             getInfo(gid).items
@@ -616,7 +614,6 @@ abstract class AbstractClient(
     }
 
     fun download(request: UriRequest, callback: (String) -> Unit) {
-        println("REQUESTED: ${request.uris}")
         scope.launch {
             val result = sendUri(request)
             if (result.isFailure) {

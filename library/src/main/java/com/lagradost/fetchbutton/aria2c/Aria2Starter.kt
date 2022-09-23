@@ -4,7 +4,7 @@ import android.app.Activity
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.lagradost.fetchbutton.Aria2Save.removeKey
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToLastRequest
+import com.lagradost.fetchbutton.aria2c.DownloadListener.sessionIdToLastRequest
 import com.lagradost.fetchbutton.utils.Coroutines.mainThread
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -72,7 +72,7 @@ object Aria2Starter {
         // delete files
         if (files.isEmpty()) {
             gid?.let { localGid ->
-                deleteFiles(AbstractClient.DownloadListener.getInfo(localGid).items.map { it.files }
+                deleteFiles(DownloadListener.getInfo(localGid).items.map { it.files }
                     .flatten())
             }
         } else {
@@ -96,15 +96,15 @@ object Aria2Starter {
         gid?.let { localGid ->
 
             // remove id from session
-            AbstractClient.DownloadListener.remove(localGid, id)
+            DownloadListener.remove(localGid, id)
 
             // remove aria2
             client?.run {
-                AbstractClient.DownloadListener.failQueueMapMutex.withLock {
-                    AbstractClient.DownloadListener.failQueueMap.remove(localGid)
+                DownloadListener.failQueueMapMutex.withLock {
+                    DownloadListener.failQueueMap.remove(localGid)
                 }
 
-                AbstractClient.DownloadListener.currentDownloadStatus.remove(localGid)
+                DownloadListener.currentDownloadStatus.remove(localGid)
 
                 remove(localGid)
             }

@@ -9,8 +9,8 @@ import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.fetchbutton.Aria2Save.getKey
 import com.lagradost.fetchbutton.aria2c.*
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToGid
-import com.lagradost.fetchbutton.aria2c.AbstractClient.DownloadListener.sessionIdToLastRequest
+import com.lagradost.fetchbutton.aria2c.DownloadListener.sessionIdToGid
+import com.lagradost.fetchbutton.aria2c.DownloadListener.sessionIdToLastRequest
 
 abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     FrameLayout(context, attributeSet) {
@@ -108,7 +108,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
      * Safer internal updateViewOnDownload
      * */
     private fun updateViewOnDownloadWithChecks(updateCount: Int) {
-        val info = AbstractClient.DownloadListener.getInfo(gid ?: return)
+        val info = DownloadListener.getInfo(gid ?: return)
         files = info.items.map { it.files }.flatten()
 
         updateViewOnDownload(info)
@@ -124,7 +124,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
      * */
     private fun observeStatusUpdate(observer: (Int) -> Unit) {
         this.findViewTreeLifecycleOwner()?.let {
-            AbstractClient.DownloadListener.observe(it, observer)
+            DownloadListener.observe(it, observer)
         }
     }
 

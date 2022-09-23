@@ -3,6 +3,7 @@ package com.lagradost.fetchbutton.ui
 import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
@@ -32,6 +33,8 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     private var iconRemoved: Int = 0
     private var iconPaused: Int = 0
     private var hideWhenIcon: Boolean = true
+
+    protected var overrideLayout: Int? = null
 
     companion object {
         val fillArray = arrayOf(
@@ -81,14 +84,25 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     private var progressBarBackground: View
     private var statusView: ImageView
 
+    open fun onInflate() {}
+
     init {
         context.obtainStyledAttributes(attributeSet, R.styleable.PieFetchButton, 0, 0).apply {
-            inflate(
-                getResourceId(
-                    R.styleable.PieFetchButton_aria2c_layout,
-                    R.layout.download_button_view
+            try {
+                inflate(
+                    overrideLayout ?: getResourceId(
+                        R.styleable.PieFetchButton_aria2c_layout,
+                        R.layout.download_button_view
+                    )
                 )
-            )
+            } catch (e: Exception) {
+                Log.e(
+                    "PieFetchButton", "Error inflating PieFetchButton, " +
+                            "check that you have declared the required aria2c attrs: aria2c_icon_scale aria2c_icon_color aria2c_outline_color aria2c_fill_color"
+                )
+                throw e
+            }
+
 
             progressBar = findViewById(R.id.progress_downloaded)
             progressBarBackground = findViewById(R.id.progress_downloaded_background)
@@ -148,6 +162,7 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
             recycle()
         }
         resetView()
+        onInflate()
     }
 
     var currentStatus: DownloadStatusTell? = null

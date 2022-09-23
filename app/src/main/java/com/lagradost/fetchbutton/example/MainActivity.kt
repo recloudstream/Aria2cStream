@@ -71,7 +71,6 @@ class MainActivity : AppCompatActivity() {
                 0xFF0000,
                 "contentTitle",
                 "Subtext",
-                "row2Extra",
                 "https://www.royalroadcdn.com/public/covers-full/36735-the-perfect-run.jpg",
                 "SpeedTest",
                 "secondRow"

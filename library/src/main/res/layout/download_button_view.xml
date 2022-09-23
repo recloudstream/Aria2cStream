@@ -3,7 +3,6 @@
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
         tools:background="@android:color/holo_blue_light">
 
     <androidx.core.widget.ContentLoadingProgressBar
@@ -12,7 +11,6 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_gravity="center"
-            android:layout_margin="5dp"
             android:indeterminate="false"
             android:max="100"
             android:progress="0"
@@ -25,18 +23,16 @@
             android:id="@+id/progress_downloaded_background"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_margin="5dp"
             android:background="@drawable/circle_shape_dotted" />
 
     <ImageView
+            android:scaleX="?attr/aria2c_icon_scale"
+            android:scaleY="?attr/aria2c_icon_scale"
             tools:visibility="visible"
             android:id="@+id/image_download_status"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_gravity="center"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="10dp"
-            android:padding="2dp"
             android:tint="?attr/aria2c_icon_color"
             android:src="@drawable/ic_baseline_play_arrow_24"
             android:visibility="visible" />

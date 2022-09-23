@@ -12,6 +12,7 @@
         <attr name="aria2c_fill_color" format="color" />
         <attr name="aria2c_outline_color" format="color" />
         <attr name="aria2c_icon_color" format="color" />
+        <attr name="aria2c_icon_scale" format="float" />
 
         <attr name="aria2c_fill" format="enum">
             <enum name="clockwise" value="0" />

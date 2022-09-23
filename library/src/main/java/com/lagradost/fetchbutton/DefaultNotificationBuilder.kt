@@ -42,8 +42,6 @@ data class NotificationMetaData(
     val contentTitle: String,
     @JsonProperty("subText")
     val subText: String?,
-    @JsonProperty("rowTwoExtra")
-    val rowTwoExtra: String?,
     @JsonProperty("posterUrl")
     val posterUrl: String?,
     @JsonProperty("linkName")

@@ -13,6 +13,7 @@
         <item name="aria2c_fill_color">@color/white</item>
         <item name="aria2c_outline_color">@color/white</item>
         <item name="aria2c_icon_color">@color/white</item>
+        <item name="aria2c_icon_scale">1.0</item>
 
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
