@@ -301,6 +301,7 @@ abstract class AbstractClient(
                         sessionGidToId[json.gid]?.let { id ->
                             sessionIdToLastRequest[id]?.let { lastRequest ->
                                 val ginfo = getInfo(json.gid)
+                                DownloadListener.mainListener?.invoke(ginfo)
                                 lastRequest.notificationMetaData?.let { notificationMetaData ->
                                     DefaultNotificationBuilder.createNotification(
                                         this,

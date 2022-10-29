@@ -34,7 +34,7 @@ open class PieFetchButton(context: Context, attributeSet: AttributeSet) :
     private var iconPaused: Int = 0
     private var hideWhenIcon: Boolean = true
 
-    protected var overrideLayout: Int? = null
+    var overrideLayout: Int? = null
 
     companion object {
         val fillArray = arrayOf(

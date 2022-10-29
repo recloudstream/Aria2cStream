@@ -32,16 +32,63 @@ object Aria2Starter {
 
     // this is used to store keys
     var saveActivity: WeakReference<Activity> = WeakReference(null)
+    //TODO https://developer.android.com/training/data-storage/shared/documents-files
+    /*fun checkPermission(request: UriRequest): Boolean {
+        request.directory?.let { dir ->
+            if (!File(dir).canWrite()) {
+                println("CANT WRITE TO $dir")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    saveActivity.get()?.let { act ->
+                        act.contentResolver
+                        val sm: StorageManager =
+                            act.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+                        val intent = sm.primaryStorageVolume.createOpenDocumentTreeIntent()
+                        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION and Intent.FLAG_GRANT_WRITE_URI_PERMISSION and Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        val uri: Uri =
+                            intent.getParcelableExtra("android.provider.extra.INITIAL_URI") ?: return false
+                        var scheme = uri.toString()
+                        Log.d("TAG", "INITIAL_URI scheme: $scheme")
+                        scheme = scheme.replace("/root/", "/document/")
+                        val finalDirPath = "$scheme%3A$dir"
+                        val furi = Uri.parse(finalDirPath)
+                        intent.putExtra("android.provider.extra.INITIAL_URI", furi)
+                        intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
+                        Log.d("TAG", "uri: $furi")
+                        act.startActivityForResult(intent, 6);
+                    }
+                }
+                return false
+            }
+        }
+        return true
+    }*/
 
     fun download(request: UriRequest) {
+      //  if (!checkPermission(request)) return
+
+        //
+//
+        //
+        //
+        //
+        //
+        //
+        //
+        //
+        //
+//
+        //
         client?.download(request) {}
     }
 
     fun download(request: List<UriRequest>) {
+        //if (request.any { !checkPermission(it) }) return
+
         client?.downloadFailQueue(request) { _, _ -> }
     }
 
     fun download(vararg requests: UriRequest) {
+       // if (requests.any { !checkPermission(it) }) return
         client?.downloadFailQueue(requests.toList()) { _, _ -> }
     }
 

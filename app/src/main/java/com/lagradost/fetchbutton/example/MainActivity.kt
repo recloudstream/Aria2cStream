@@ -1,7 +1,10 @@
 package com.lagradost.fetchbutton.example
 
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.MenuItem
 import android.view.View
@@ -42,6 +45,24 @@ fun View.popupMenuNoIcons(
 }
 
 class MainActivity : AppCompatActivity() {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == RESULT_OK) {
+            val uri = data?.data
+            if (uri != null) {
+                Log.d("TAG", "onActivityResult: " + uri.path);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                }
+
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -65,7 +86,10 @@ class MainActivity : AppCompatActivity() {
         //val image = BitmapFactory.decodeResource(resources, R.drawable.example_poster)
 
         val uriReq = newUriRequest(
-            pId, "https://speed.hetzner.de/100MB.bin", "Hello World",
+            pId,
+            "https://speed.hetzner.de/100MB.bin",
+            "Hello World",
+            "/storage/emulated/0/Download",
             notificationMetaData = NotificationMetaData(
                 pId.toInt(),
                 0xFF0000,
