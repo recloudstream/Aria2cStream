@@ -3,6 +3,7 @@ package com.lagradost.fetchbutton.aria2c
 import android.app.Activity
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.fetchbutton.Aria2Save.removeKey
 import com.lagradost.fetchbutton.aria2c.DownloadListener.sessionIdToLastRequest
 import com.lagradost.fetchbutton.utils.Coroutines.mainThread
@@ -11,9 +12,13 @@ import java.io.File
 import java.lang.ref.WeakReference
 
 data class Aria2Settings(
+    @JsonProperty("token")
     val token: String,
+    @JsonProperty("port")
     val port: Int,
+    @JsonProperty("dir")
     val dir: String,
+    @JsonProperty("sessionDir")
     val sessionDir: String? = null, // null for not save
     //val checkCertificate : Boolean = false,
 )

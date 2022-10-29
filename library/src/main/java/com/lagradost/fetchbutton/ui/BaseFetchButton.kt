@@ -23,11 +23,11 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     )
 
     lateinit var progressBar: ContentLoadingProgressBar
-    protected val gid: String? get() = sessionIdToGid[persistentId]
+    val gid: String? get() = sessionIdToGid[persistentId]
 
     // used for resuming data
-    private var _lastRequestOverride: UriRequest? = null
-    protected var lastRequest: UriRequest?
+    var _lastRequestOverride: UriRequest? = null
+    var lastRequest: UriRequest?
         get() = _lastRequestOverride ?: sessionIdToLastRequest[persistentId]
         set(value) {
             _lastRequestOverride = value
@@ -109,7 +109,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
      * */
     private fun updateViewOnDownloadWithChecks(updateCount: Int) {
         val info = DownloadListener.getInfo(gid ?: return)
-        files = info.items.map { it.files }.flatten()
+        files = info.items.flatMap { it.files }
 
         updateViewOnDownload(info)
     }

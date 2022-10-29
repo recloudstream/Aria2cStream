@@ -175,6 +175,7 @@ data class JsonError(
 )
 
 data class Metadata(
+    @JsonProperty("items")
     val items: ArrayList<AbstractClient.JsonTell>
 ) {
     val status by lazy { getStatus(items) }

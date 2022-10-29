@@ -30,7 +30,7 @@ object DownloadListener {
 
     val currentDownloadStatus: HashMap<String, AbstractClient.JsonTell> = hashMapOf()
 
-    var mainListener : ((Metadata) -> Unit)? = null
+    var mainListener : ((Pair<AbstractClient.JsonTell, Metadata>) -> Unit)? = null
 
     // this points to the parent gid
     //val follow: HashMap<String, String> = hashMapOf()

@@ -29,15 +29,14 @@ abstract class AbstractClient(
     private var requestId: Long = 0
 
     data class Profile(
-        val serverSsl: Boolean,
-        val serverAddr: String,
-        val serverPort: Int,
-        val serverEndpoint: String,
-        val timeout: Int,
-        val token: String?,
-        val statusUpdateRateMs: Long,
+        @JsonProperty("serverSsl") val serverSsl: Boolean,
+        @JsonProperty("serverAddr") val serverAddr: String,
+        @JsonProperty("serverPort") val serverPort: Int,
+        @JsonProperty("serverEndpoint") val serverEndpoint: String,
+        @JsonProperty("timeout") val timeout: Int,
+        @JsonProperty("token") val token: String?,
+        @JsonProperty("statusUpdateRateMs") val statusUpdateRateMs: Long,
     )
-
 
     protected val scope = CoroutineScope(Job() + Dispatchers.IO)
 
@@ -300,8 +299,9 @@ abstract class AbstractClient(
                     Aria2Starter.saveActivity.get()?.apply {
                         sessionGidToId[json.gid]?.let { id ->
                             sessionIdToLastRequest[id]?.let { lastRequest ->
+
                                 val ginfo = getInfo(json.gid)
-                                DownloadListener.mainListener?.invoke(ginfo)
+                                DownloadListener.mainListener?.invoke(Pair(json, ginfo))
                                 lastRequest.notificationMetaData?.let { notificationMetaData ->
                                     DefaultNotificationBuilder.createNotification(
                                         this,
