@@ -1,8 +1,8 @@
-# FetchButton
+# Aria2c Stream
 
 #### [Work in progress]
 
-[![](https://jitpack.io/v/LagradOst/Aria2cButton.svg)](https://jitpack.io/#LagradOst/Aria2cButton)
+[![](https://jitpack.io/v/recloudstream/Aria2cStream.svg)](https://jitpack.io/#recloudstream/Aria2cStream/)
 
 Just a simple library to have a download button which works with Aria2c. Mostly for personal usage.
 
