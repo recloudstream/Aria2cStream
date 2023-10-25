@@ -1,7 +1,7 @@
 package com.lagradost.fetchbutton.aria2c
 
 import android.util.Log
-import com.lagradost.fetchbutton.aria2c.AbstractClient
+import com.lagradost.fetchbutton.BuildConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -93,6 +93,10 @@ class WebsocketClient(profile: Profile) : AbstractClient(profile) {
 
     override suspend fun send(id: String, req: JSONObject): Result<String> {
         try {
+            if(BuildConfig.DEBUG) {
+                Log.v(TAG, "Send: $req")
+            }
+
             if (closed || socket?.send(req.toString()) != true) {
                 return Result.failure(Aria2SendError(SendError.Closed))
             }

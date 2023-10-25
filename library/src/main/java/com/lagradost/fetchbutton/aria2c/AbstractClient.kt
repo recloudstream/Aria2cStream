@@ -364,33 +364,39 @@ abstract class AbstractClient(
         ).map { async { send<JsonTellParent>(it) } }.map { it.await() }
     }
 
+    private fun Any.toJson(): String {
+        if (this is String) return this
+        return mapper.writeValueAsString(this)
+    }
+
     private fun createUriRequest(data: UriRequest) = createRequest(
         Method.ADD_URI,
         JSONArray().apply { data.uris.forEach { uri -> put(uri) } }, // uris
         JSONObject().apply {
-            if (data.headers.isNotEmpty()) {
+            if (data.args.headers.isNotEmpty()) {
                 val array = JSONArray()
-                for ((key, value) in data.headers) {
+                for ((key, value) in data.args.headers) {
                     array.put("$key:$value")
                 }
                 put("header", array)
             }
-            if (data.fileName != null)
-                put("out", data.fileName)
-            if (data.directory != null)
-                put("dir", data.directory)
-            if (data.checkIntegrity != null)
-                put("check-integrity", data.checkIntegrity)
-            if (data.continueDownload != null)
-                put("continue ", data.continueDownload)
-            if (data.userAgent != null)
-                put("user-agent ", data.userAgent)
-            if (data.seedRatio != null)
-                put("seed-ratio", data.seedRatio)
-            if (data.seedTime != null)
-                put("seed-time", data.seedTime)
-            if (data.referer != null)
-                put("referer", data.referer)
+
+            if (data.args.btExcludeTracker.isNotEmpty()) {
+                put("bt-exclude-tracker", data.args.btExcludeTracker.joinToString(separator = ","))
+            }
+            if (data.args.btTracker.isNotEmpty()) {
+                put("bt-tracker", data.args.btTracker.joinToString(separator = ","))
+            }
+            if (data.args.noProxy.isNotEmpty()) {
+                put("no-proxy", data.args.noProxy.joinToString(separator = ","))
+            }
+
+            // kinda shitty solution, but it is the easiest. skip all _ as those are lists
+            val jsonList = parseJson<Map<String, Any>>(data.args.toJson())
+            for ((k, v) in jsonList) {
+                if(k.startsWith('_')) continue
+                put(k,v.toString())
+            }
         }, // options
         Int.MAX_VALUE // position, max to push to the last position within the queue
     )
