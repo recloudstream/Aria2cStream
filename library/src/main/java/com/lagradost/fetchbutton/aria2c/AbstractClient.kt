@@ -381,14 +381,17 @@ abstract class AbstractClient(
                 put("header", array)
             }
 
-            if (data.args.btExcludeTracker.isNotEmpty()) {
-                put("bt-exclude-tracker", data.args.btExcludeTracker.joinToString(separator = ","))
-            }
-            if (data.args.btTracker.isNotEmpty()) {
-                put("bt-tracker", data.args.btTracker.joinToString(separator = ","))
-            }
-            if (data.args.noProxy.isNotEmpty()) {
-                put("no-proxy", data.args.noProxy.joinToString(separator = ","))
+            for((name, list) in listOf(
+                "bt-exclude-tracker" to data.args.btExcludeTracker,
+                "bt-tracker" to data.args.btTracker,
+                "no-proxy" to data.args.noProxy,
+                "metalink-location" to data.args.metaLinkLocation,
+                "async-dns-server" to data.args.asyncDnsServer,
+                "multiple-interface" to data.args.multipleInterface,
+            )) {
+                if (list.isNotEmpty()) {
+                    put(name, list.joinToString(separator = ","))
+                }
             }
 
             // kinda shitty solution, but it is the easiest. skip all _ as those are lists
