@@ -1078,7 +1078,7 @@ data class Aria2Args(
 
     /**
      *
-     * --follow-torrent=true|false|mem¶
+     * --follow-torrent=true|false|mem
      *
      * If true or mem is specified, when a file whose suffix is
      * .torrent or content type is application/x-bittorrent is downloaded,
@@ -1092,7 +1092,7 @@ data class Aria2Args(
      *
      */
     @JsonProperty("follow-torrent")
-    val followTorrent: Boolean? = null,
+    val followTorrent: FollowMetaLinkType? = null,
 
     /**
      * --listen-port=<PORT>...
@@ -1184,7 +1184,888 @@ data class Aria2Args(
      */
     @JsonProperty("torrent-file")
     val torrentFile: String? = null,
+
+    /**
+     *
+     * --follow-metalink=true|false|mem
+     *
+     * If true or mem is specified, when a file whose suffix is .meta4 or
+     * .metalink or content type of application/metalink4+xml or application/metalink+xml
+     * is downloaded, aria2 parses it as a metalink file and downloads files mentioned in it.
+     * If mem is specified, a metalink file is not written to the disk,
+     * but is just kept in memory. If false is specified, the .metalink file is
+     * downloaded to the disk, but is not parsed as a metalink file and its contents
+     * are not downloaded.
+     *
+     * Default: true
+     */
+    @JsonProperty("follow-metalink")
+    val followMetaLink: FollowMetaLinkType? = null,
+
+    /**
+     *
+     * --metalink-base-uri=<URI>
+     *
+     * Specify base URI to resolve relative URI in metalink:url
+     * and metalink:metaurl element in a metalink file stored in local disk.
+     * If URI points to a directory, URI must end with /.
+     *
+     */
+    @JsonProperty("metalink-base-uri")
+    val metaLinkBaseUri: String? = null,
+
+    /**
+     * -M, --metalink-file=<METALINK_FILE>
+     *
+     * The file path to ".meta4" and ".metalink" file.
+     * Reads input from stdin when - is specified.
+     * You are not required to use this option because you can specify
+     * ".metalink" files without --metalink-file.
+     *
+     */
+    @JsonProperty("metalink-file")
+    val metaLinkFile: String? = null,
+
+    /**
+     * --metalink-language=<LANGUAGE>
+     *
+     * The language of the file to download.
+     */
+    @JsonProperty("metalink-language")
+    val metaLinkLanguage: String? = null,
+
+    /**
+     * --metalink-location=<LOCATION>[,...]¶
+     *
+     * The location of the preferred server.
+     * A comma-delimited list of locations is acceptable, for example, jp,us.
+     */
+    @JsonProperty("_metalink-location")
+    val metaLinkLocation: List<String> = emptyList(),
+
+    /**
+     * --metalink-os=<OS>
+     *
+     * The operating system of the file to download.
+     */
+    @JsonProperty("metalink-os")
+    val metaLinkOs: String? = null,
+
+    /**
+     * --metalink-version=<VERSION>
+     *
+     * The version of the file to download.
+     */
+    @JsonProperty("metalink-version")
+    val metaLinkVersion: String? = null,
+
+    /**
+     * --metalink-preferred-protocol=<PROTO>
+     *
+     * Specify preferred protocol. The possible values are http, https, ftp and none.
+     * Specify none to disable this feature.
+     *
+     * Default: none
+     */
+    @JsonProperty("metalink-preferred-protocol")
+    val metaLinkPreferredProtocol: MetaLinkPreferredProtocol? = null,
+
+    /**
+     * --metalink-enable-unique-protocol [true|false]
+     *
+     * If true is given and several protocols are available for a mirror in a metalink file,
+     * aria2 uses one of them. Use --metalink-preferred-protocol option to specify the
+     * preference of protocol.
+     *
+     * Default: true
+     */
+    @JsonProperty("metalink-enable-unique-protocol")
+    val metaLinkEnableUniqueProtocol: Boolean? = null,
+
+    /**
+     * --allow-overwrite [true|false]
+     *
+     * Restart download from scratch if the corresponding control file doesn't exist.
+     * See also --auto-file-renaming option.
+     *
+     * Default: false
+     */
+    @JsonProperty("allow-overwrite")
+    val allowOverwrite: Boolean? = null,
+
+    /**
+     * --allow-piece-length-change [true|false]
+     *
+     * If false is given, aria2 aborts download when a piece length is different
+     * from one in a control file. If true is given, you can proceed but some download
+     * progress will be lost.
+     *
+     * Default: false
+     */
+    @JsonProperty("allow-piece-length-change")
+    val allowPieceLengthChange: Boolean? = null,
+
+    /**
+     * --always-resume [true|false]
+     *
+     * Always resume download. If true is given, aria2 always tries to resume download
+     * and if resume is not possible, aborts download. If false is given, when all
+     * given URIs do not support resume or aria2 encounters N URIs which does not
+     * support resume (N is the value specified using --max-resume-failure-tries option),
+     * aria2 downloads file from scratch. See --max-resume-failure-tries option.
+     *
+     * Default: true
+     */
+    @JsonProperty("always-resume")
+    val alwaysResume: Boolean? = null,
+
+    /**
+     * --async-dns [true|false]
+     *
+     * Enable asynchronous DNS.
+     *
+     * Default: true
+     */
+    @JsonProperty("async-dns")
+    val asyncDns: Boolean? = null,
+
+    /**
+     * --async-dns-server=<IPADDRESS>[,...]
+     *
+     * Comma separated list of DNS server address used in asynchronous DNS resolver.
+     * Usually asynchronous DNS resolver reads DNS server addresses from /etc/resolv.conf.
+     * When this option is used, it uses DNS servers specified in this option instead of
+     * ones in /etc/resolv.conf. You can specify both IPv4 and IPv6 address. This option
+     * is useful when the system does not have /etc/resolv.conf and user does not have
+     * the permission to create it.
+     */
+    @JsonProperty("_async-dns-server")
+    val asyncDnsServer: List<String> = emptyList(),
+
+    /**
+     * --auto-file-renaming [true|false]
+     *
+     * Rename file name if the same file already exists.
+     * This option works only in HTTP(S)/FTP download. The new file name has a dot
+     * and a number(1..9999) appended after the name, but before the file extension,
+     * if any.
+     *
+     * Default: true
+     */
+    @JsonProperty("auto-file-renaming")
+    val autoFileRenaming: Boolean? = null,
+
+    /**
+     * --auto-save-interval=<SEC>
+     *
+     * Save a control file(*.aria2) every SEC seconds.
+     * If 0 is given, a control file is not saved during download.
+     * aria2 saves a control file when it stops regardless of the value.
+     * The possible values are between 0 to 600.
+     *
+     * Default: 60
+     */
+    @JsonProperty("auto-save-interval")
+    val autoSaveIntervalSec: Int? = null,
+
+    /**
+     * --conditional-get [true|false]
+     *
+     * Download file only when the local file is older than remote file.
+     * This function only works with HTTP(S) downloads only. It does not work if
+     * file size is specified in Metalink. It also ignores Content-Disposition header.
+     * If a control file exists, this option will be ignored. This function uses
+     * If-Modified-Since header to get only newer file conditionally.
+     * When getting modification time of local file, it uses user supplied file name
+     * (see --out option) or file name part in URI if --out is not specified.
+     * To overwrite existing file, --allow-overwrite is required.
+     *
+     * Default: false
+     */
+    @JsonProperty("conditional-get")
+    val conditionalGet: Boolean? = null,
+
+    /**
+     * --conf-path=<PATH>
+     *
+     * Change the configuration file path to PATH. Default: $HOME/.aria2/aria2.conf
+     * if present, otherwise $XDG_CONFIG_HOME/aria2/aria2.conf.
+     */
+    @JsonProperty("conf-path")
+    val confPath: String? = null,
+
+    /**
+     * --console-log-level=<LEVEL>
+     *
+     * Set log level to output to console. LEVEL is either debug, info, notice,
+     * warn or error.
+     *
+     * Default: notice
+     */
+    @JsonProperty("console-log-level")
+    val consoleLogLevel: LogLevel? = null,
+
+    /**
+     * --content-disposition-default-utf8 [true|false]
+     *
+     * Handle quoted string in Content-Disposition header as UTF-8 instead of ISO-8859-1,
+     * for example, the filename parameter, but not the extended version filename*.
+     *
+     * Default: false
+     */
+    @JsonProperty("content-disposition-default-utf8")
+    val contentDispositionDefaultUtf8: Boolean? = null,
+
+    /**
+     * -D, --daemon [true|false]
+     *
+     * Run as daemon. The current working directory will be changed to / and standard input,
+     * standard output and standard error will be redirected to /dev/null.
+     *
+     * Default: false
+     */
+    @JsonProperty("daemon")
+    val daemon: Boolean? = null,
+
+    /**
+     * --deferred-input [true|false]
+     *
+     * If true is given, aria2 does not read all URIs and options from file specified by
+     * --input-file option at startup, but it reads one by one when it needs later.
+     * This may reduce memory usage if input file contains a lot of URIs to download.
+     * If false is given, aria2 reads all URIs and options at startup.
+     *
+     * Default: false
+     *
+     * Warning
+     *
+     * --deferred-input option will be disabled when --save-session is used together.
+     */
+    @JsonProperty("deferred-input")
+    val deferredInput: Boolean? = null,
+
+    /**
+     * --disable-ipv6 [true|false]
+     *
+     * Disable IPv6. This is useful if you have to use broken DNS and want to avoid terribly
+     * slow AAAA record lookup.
+     *
+     * Default: false
+     */
+    @JsonProperty("disable-ipv6")
+    val disableIpv6: Boolean? = null,
+
+    /**
+     * --disk-cache=<SIZE>¶
+     *
+     * Enable disk cache. If SIZE is 0, the disk cache is disabled.
+     * This feature caches the downloaded data in memory, which grows to at most SIZE bytes.
+     * The cache storage is created for aria2 instance and shared by all downloads.
+     * The one advantage of the disk cache is reduce the disk I/O because the data are
+     * written in larger unit and it is reordered by the offset of the file. If hash
+     * checking is involved and the data are cached in memory, we don't need to read
+     * them from the disk. SIZE can include K or M (1K = 1024, 1M = 1024K).
+     *
+     * Default: 16M
+     */
+    @JsonProperty("disk-cache")
+    val diskCacheBytes: Long? = null,
+
+    /**
+     * --dscp=<DSCP>
+     *
+     * Set DSCP value in outgoing IP packets of BitTorrent traffic for QoS.
+     * This parameter sets only DSCP bits in TOS field of IP packets,
+     * not the whole field. If you take values from /usr/include/netinet/ip.h divide
+     * them by 4 (otherwise values would be incorrect, e.g. your CS1 class would turn
+     * into CS4). If you take commonly used values from RFC, network vendors' documentation,
+     * Wikipedia or any other source, use them as they are.
+     */
+    @JsonProperty("dscp")
+    val dscp: String? = null,
+
+    /**
+     *
+     * --rlimit-nofile=<NUM>¶
+     *
+     * Set the soft limit of open file descriptors. This open will only have effect when:
+     *
+     *  a. The system supports it (posix)
+     *
+     *  b. The limit does not exceed the hard limit.
+     *
+     *  c. The specified limit is larger than the current soft limit.
+     *
+     * This is equivalent to setting nofile via ulimit, except that it will never decrease the limit.
+     * This option is only available on systems supporting the rlimit API.
+     */
+    @JsonProperty("rlimit-nofile")
+    val rlimitNofile: Int? = null,
+
+    /**
+     * --enable-color [true|false]
+     *
+     * Enable color output for a terminal.
+     *
+     * Default: true
+     */
+    @JsonProperty("enable-color")
+    val enableColor: Boolean? = null,
+
+    /**
+     * --enable-mmap [true|false]
+     *
+     * Map files into memory. This option may not work if the file space is not pre-allocated.
+     * See --file-allocation.
+     *
+     * Default: false
+     */
+    @JsonProperty("enable-mmap")
+    val enableMmap: Boolean? = null,
+
+    /**
+     * --event-poll=<POLL>
+     *
+     * Specify the method for polling events.
+     * The possible values are epoll, kqueue, port, poll and select.
+     * For each epoll, kqueue, port and poll, it is available if system supports it.
+     * epoll is available on recent Linux. kqueue is available on various *BSD systems
+     * including Mac OS X. port is available on Open Solaris. The default value may vary
+     * depending on the system you use.
+     */
+    @JsonProperty("event-poll")
+    val eventPoll: EventPollType? = null,
+
+    /**
+     *  --file-allocation=<METHOD>
+     *
+     * Specify file allocation method. none doesn't pre-allocate file space.
+     * prealloc pre-allocates file space before download begins. This may take some
+     * time depending on the size of the file. If you are using newer file systems
+     * such as ext4 (with extents support), btrfs, xfs or NTFS(MinGW build only),
+     * falloc is your best choice. It allocates large(few GiB) files almost instantly.
+     * Don't use falloc with legacy file systems such as ext3 and FAT32 because it takes
+     * almost same time as prealloc and it blocks aria2 entirely until allocation finishes.
+     * falloc may not be available if your system doesn't have posix_fallocate(3) function.
+     * trunc uses ftruncate(2) system call or platform-specific counterpart to truncate a
+     * file to a specified length.
+     *
+     * Possible Values: none, prealloc, trunc, falloc Default: prealloc
+     *
+     * Warning
+     *
+     * Using trunc seemingly allocates disk space very quickly, but what it actually does is
+     * that it sets file length metadata in file system, and does not allocate disk space at all. This means that it does not help avoiding fragmentation.
+     *
+     * Note
+     *
+     * In multi file torrent downloads, the files adjacent forward to the specified files are
+     * also allocated if they share the same piece.
+     *
+     */
+    @JsonProperty("file-allocation")
+    val fileAllocation: FileAllocationType? = null,
+
+    /**
+     * --force-save [true|false]
+     *
+     * Save download with --save-session option even if the download is completed or removed.
+     * This option also saves control file in that situations. This may be useful to save
+     * BitTorrent seeding which is recognized as completed state.
+     *
+     * Default: false
+     */
+    @JsonProperty("force-save")
+    val forceSave: Boolean? = null,
+
+    /**
+     * --save-not-found [true|false]
+     *
+     * Save download with --save-session option even if the file was not found on the server.
+     * This option also saves control file in that situations.
+     *
+     * Default: true
+     */
+    @JsonProperty("save-not-found")
+    val saveNotFound: Boolean? = null,
+
+    /**
+     * --gid=<GID>¶
+     *
+     * Set GID manually. aria2 identifies each download by the ID called GID.
+     * The GID must be hex string of 16 characters, thus [0-9a-fA-F] are allowed and
+     * leading zeros must not be stripped. The GID all 0 is reserved and must not be used.
+     * The GID must be unique, otherwise error is reported and the download is not added.
+     * This option is useful when restoring the sessions saved using --save-session option.
+     * If this option is not used, new GID is generated by aria2.
+     */
+    @JsonProperty("gid")
+    val gid: String? = null,
+
+    /**
+     * --hash-check-only [true|false]
+     *
+     * If true is given, after hash check using --check-integrity option, abort download
+     * whether or not download is complete.
+     *
+     * Default: false
+     */
+    @JsonProperty("hash-check-only")
+    val hashCheckOnly: Boolean? = null,
+
+    /**
+     * --human-readable [true|false]
+     *
+     * Print sizes and speed in human readable format (e.g., 1.2Ki, 3.4Mi) in the console
+     * readout.
+     *
+     * Default: true
+     */
+    @JsonProperty("human-readable")
+    val humanReadable: Boolean? = null,
+
+    /**
+     * --interface=<INTERFACE>¶
+     *
+     * Bind sockets to given interface. You can specify interface name, IP address and host
+     * name. Possible Values: interface, IP address, host name
+     *
+     * Note
+     *
+     * If an interface has multiple addresses, it is highly recommended to specify IP address
+     * explicitly. See also --disable-ipv6. If your system doesn't have getifaddrs(3),
+     * this option doesn't accept interface name.
+     */
+    @JsonProperty("interface")
+    val socketInterface: String? = null,
+
+    /**
+     * --keep-unfinished-download-result [true|false]
+     *
+     * Keep unfinished download results even if doing so exceeds --max-download-result.
+     * This is useful if all unfinished downloads must be saved in session file
+     * (see --save-session option). Please keep in mind that there is no upper bound to
+     * the number of unfinished download result to keep. If that is undesirable, turn
+     * this option off.
+     *
+     * Default: true
+     */
+    @JsonProperty("keep-unfinished-download-result")
+    val keepUnfinishedDownloadResult: Boolean? = null,
+
+    /**
+     * --max-download-result=<NUM>
+     *
+     * Set maximum number of download result kept in memory.
+     * The download results are completed/error/removed downloads.
+     * The download results are stored in FIFO queue and it can store at most
+     * NUM download results. When queue is full and new download result is created,
+     * oldest download result is removed from the front of the queue and new one is
+     * pushed to the back. Setting big number in this option may result high memory
+     * consumption after thousands of downloads. Specifying 0 means no download result
+     * is kept. Note that unfinished downloads are kept in memory regardless of this
+     * option value. See --keep-unfinished-download-result option.
+     *
+     * Default: 1000
+     */
+    @JsonProperty("max-download-result")
+    val maxDownloadResult: Int? = null,
+
+    /**
+     * --max-mmap-limit=<SIZE>
+     *
+     * Set the maximum file size to enable mmap (see --enable-mmap option).
+     * The file size is determined by the sum of all files contained in one download.
+     * For example, if a download contains 5 files, then file size is the total size of those
+     * files. If file size is strictly greater than the size specified in this option,
+     * mmap will be disabled.
+     *
+     * Default: 9223372036854775807
+     */
+    @JsonProperty("max-mmap-limit")
+    val maxMmapLimitBytes: Long? = null,
+
+    /**
+     * --max-resume-failure-tries=<N>
+     *
+     * When used with --always-resume=false, aria2 downloads file from scratch when aria2
+     * detects N number of URIs that does not support resume. If N is 0, aria2 downloads file
+     * from scratch when all given URIs do not support resume. See --always-resume option.
+     *
+     * Default: 0
+     */
+    @JsonProperty("max-resume-failure-tries")
+    val maxResumeFailureTries: Int? = null,
+
+    /**
+     *
+     * --min-tls-version=<VERSION>
+     *
+     * Specify minimum SSL/TLS version to enable.
+     * Possible Values: TLSv1.1, TLSv1.2, TLSv1.3
+     *
+     * Default: TLSv1.2
+     */
+    @JsonProperty("min-tls-version")
+    val minTlsVersion: TlsVersionType? = null,
+
+    /**
+     * --multiple-interface=<INTERFACES>
+     *
+     * Comma separated list of interfaces to bind sockets to.
+     * Requests will be splited among the interfaces to achieve link aggregation.
+     * You can specify interface name, IP address and hostname. If --interface is used,
+     * this option will be ignored.
+     *
+     * Possible Values: interface, IP address, hostname
+     */
+    @JsonProperty("_multiple-interface")
+    val multipleInterface: List<String> = emptyList(),
+
+    /**
+     * --log-level=<LEVEL>
+     *
+     * Set log level to output. LEVEL is either debug, info, notice, warn or error.
+     *
+     * Default: debug
+     */
+    @JsonProperty("log-level")
+    val logLevel: LogLevel? = null,
+
+    // no on-complete because we don't want that security hole
+
+    /**
+     * --optimize-concurrent-downloads [true|false|<A>:<B>]¶
+     *
+     * Optimizes the number of concurrent downloads according to the bandwidth available.
+     * aria2 uses the download speed observed in the previous downloads to adapt the number
+     * of downloads launched in parallel according to the rule N = A + B Log10(speed in Mbps).
+     * The coefficients A and B can be customized in the option arguments with A and B
+     * separated by a colon. The default values (A=5, B=25) lead to using typically 5
+     * parallel downloads on 1Mbps networks and above 50 on 100Mbps networks. The number of
+     * parallel downloads remains constrained under the maximum defined by the
+     * --max-concurrent-downloads parameter.
+     *
+     * Default: false
+     */
+    @JsonProperty("optimize-concurrent-downloads")
+    val optimizeConcurrentDownloads: String? = null,
+
+    /**
+     * --piece-length=<LENGTH>
+     *
+     * Set a piece length for HTTP/FTP downloads. This is the boundary when aria2 splits a file.
+     * All splits occur at multiple of this length. This option will be ignored in BitTorrent
+     * downloads. It will be also ignored if Metalink file contains piece hashes. Default: 1M
+     *
+     * Note
+     *
+     * The possible use case of --piece-length option is change the request range in one HTTP
+     * pipelined request. To enable HTTP pipelining use --enable-http-pipelining.
+     */
+    @JsonProperty("piece-length")
+    val pieceLengthBytes: Long? = null,
+
+    /**
+     * --show-console-readout [true|false]
+     *
+     * Show console readout.
+     *
+     * Default: true
+     */
+    @JsonProperty("show-console-readout")
+    val showConsoleReadout: Boolean? = null,
+
+    /**
+     * --stderr [true|false]
+     *
+     * Redirect all console output that would be otherwise printed in stdout to stderr.
+     *
+     * Default: false
+     */
+    @JsonProperty("stderr")
+    val stderr: Boolean? = null,
+
+    /**
+     * --summary-interval=<SEC>
+     *
+     * Set interval in seconds to output download progress summary.
+     * Setting 0 suppresses the output.
+     *
+     * Default: 60
+     */
+    @JsonProperty("summary-interval")
+    val summaryIntervalSec: Int? = null,
+
+    /**
+     * -Z, --force-sequential [true|false]
+     *
+     * Fetch URIs in the command-line sequentially and download each URI in a separate session,
+     * like the usual command-line download utilities.
+     *
+     * Default: false
+     */
+    @JsonProperty("force-sequential")
+    val forceSequential: Boolean? = null,
+
+    /**
+     * --max-overall-download-limit=<SPEED>
+     *
+     * Set max overall download speed in bytes/sec. 0 means unrestricted.
+     * You can append K or M (1K = 1024, 1M = 1024K). To limit the download speed per
+     * download, use --max-download-limit option.
+     *
+     * Default: 0
+     */
+    @JsonProperty("max-overall-download-limit")
+    val maxOverallDownloadLimitBytes: Long? = null,
+
+    /**
+     * --max-download-limit=<SPEED>
+     *
+     * Set max download speed per each download in bytes/sec. 0 means unrestricted.
+     * You can append K or M (1K = 1024, 1M = 1024K). To limit the overall download speed,
+     * use --max-overall-download-limit option.
+     *
+     * Default: 0
+     */
+    @JsonProperty("max-download-limit")
+    val maxDownloadLimitBytes: Long? = null,
+
+    /**
+     * --no-conf [true|false]
+     *
+     * Disable loading aria2.conf file.
+     */
+    @JsonProperty("no-conf")
+    val noConf: Boolean? = null,
+
+    /**
+     *
+     * --no-file-allocation-limit=<SIZE>
+     *
+     * No file allocation is made for files whose size is smaller than SIZE.
+     * You can append K or M (1K = 1024, 1M = 1024K).
+     *
+     * Default: 5M
+     *
+     */
+    @JsonProperty("no-file-allocation-limit")
+    val noFileAllocationLimitBytes: Long? = null,
+
+    /**
+     * -P, --parameterized-uri [true|false]
+     *
+     * Enable parameterized URI support. You can specify set of parts:
+     * http://{sv1,sv2,sv3}/foo.iso. Also you can specify numeric sequences with step counter:
+     * http://host/image[000-100:2].img. A step counter can be omitted.
+     * If all URIs do not point to the same file, such as the second example above, -Z option
+     * is required.
+     *
+     * Default: false
+     *
+     */
+    @JsonProperty("parameterized-uri")
+    val parameterizedUri: Boolean? = null,
+
+    /**
+     * -q, --quiet [true|false]
+     *
+     * Make aria2 quiet (no console output).
+     *
+     * Default: false
+     */
+    @JsonProperty("quiet")
+    val quiet: Boolean? = null,
+
+    /**
+     * --realtime-chunk-checksum [true|false]
+     *
+     * Validate chunk of data by calculating checksum while downloading a file if chunk checksums
+     * are provided.
+     *
+     * Default: true
+     */
+    @JsonProperty("realtime-chunk-checksum")
+    val realtimeChunkChecksum: Boolean? = null,
+
+    /**
+     * --remove-control-file [true|false]
+     *
+     * Remove control file before download. Using with --allow-overwrite=true,
+     * download always starts from scratch. This will be useful for users behind
+     * proxy server which disables resume.
+     */
+    @JsonProperty("remove-control-file")
+    val removeControlFile: Boolean? = null,
+
+    /**
+     *
+     * --save-session=<FILE>
+     *
+     *     Save error/unfinished downloads to FILE on exit. You can pass this output file to
+     *     aria2c with --input-file option on restart. If you like the output to be gzipped
+     *     append a .gz extension to the file name. Please note that downloads added by
+     *     aria2.addTorrent() and aria2.addMetalink() RPC method and whose meta data could not
+     *     be saved as a file are not saved. Downloads removed using aria2.remove() and
+     *     aria2.forceRemove() will not be saved. GID is also saved with gid, but there are
+     *     some restrictions, see below.
+     *
+     *     Note
+     *
+     *     Normally, GID of the download itself is saved. But some downloads use meta data
+     *     (e.g., BitTorrent and Metalink). In this case, there are some restrictions.
+     *
+     *     magnet URI, and followed by torrent download
+     *
+     *         GID of BitTorrent meta data download is saved.
+     *     URI to torrent file, and followed by torrent download
+     *
+     *         GID of torrent file download is saved.
+     *     URI to metalink file, and followed by file downloads described in metalink file
+     *
+     *         GID of metalink file download is saved.
+     *     local torrent file
+     *
+     *         GID of torrent download is saved.
+     *     local metalink file
+     *
+     *         Any meaningful GID is not saved.
+     *
+     */
+    @JsonProperty("save-session")
+    val saveSession: String? = null,
+
+    /**
+     * --save-session-interval=<SEC>
+     *
+     * Save error/unfinished downloads to a file specified by --save-session option every
+     * SEC seconds. If 0 is given, file will be saved only when aria2 exits.
+     *
+     * Default: 0
+     */
+    @JsonProperty("save-session-interval")
+    val saveSessionIntervalSec: Int? = null,
+
+    /**
+     * --socket-recv-buffer-size=<SIZE>
+     *
+     * Set the maximum socket receive buffer in bytes. Specifying 0 will disable this option.
+     * This value will be set to socket file descriptor using SO_RCVBUF socket option with
+     * setsockopt() call.
+     *
+     * Default: 0
+     */
+    @JsonProperty("socket-recv-buffer-size")
+    val socketRecvBufferSizeBytes: Long? = null,
+
+    /**
+     * --stop=<SEC>
+     *
+     * Stop application after SEC seconds has passed. If 0 is given,
+     * this feature is disabled.
+     *
+     * Default: 0
+     */
+    @JsonProperty("stop")
+    val stopSec: Int? = null,
+
+    // no stop-with-process
+
+    /**
+     * --truncate-console-readout [true|false]
+     *
+     * Truncate console readout to fit in a single line.
+     *
+     * Default: true
+     */
+    @JsonProperty("truncate-console-readout")
+    val truncateConsoleReadout: Boolean? = null,
 )
+
+enum class TlsVersionType {
+    @JsonProperty("TLSv1.1")
+    TLSv1_1,
+
+    @JsonProperty("TLSv1.2")
+    TLSv1_2,
+
+    @JsonProperty("TLSv1.3")
+    TLSv1_3
+}
+
+enum class FileAllocationType {
+    @JsonProperty("none")
+    None,
+
+    @JsonProperty("prealloc")
+    Prealloc,
+
+    @JsonProperty("trunc")
+    Trunc,
+
+    @JsonProperty("falloc")
+    Falloc,
+}
+
+enum class EventPollType {
+    @JsonProperty("epoll")
+    Epoll,
+
+    @JsonProperty("kqueue")
+    Kqueue,
+
+    @JsonProperty("port")
+    Port,
+
+    @JsonProperty("poll")
+    Poll,
+
+    @JsonProperty("select")
+    Select
+}
+
+enum class LogLevel {
+    @JsonProperty("debug")
+    Debug,
+
+    @JsonProperty("info")
+    Info,
+
+    @JsonProperty("notice")
+    Notice,
+
+    @JsonProperty("warn")
+    Warn,
+
+    @JsonProperty("error")
+    Error
+}
+
+enum class MetaLinkPreferredProtocol {
+    @JsonProperty("http")
+    Http,
+
+    @JsonProperty("https")
+    Https,
+
+    @JsonProperty("ftp")
+    Ftp,
+
+    @JsonProperty("none")
+    None,
+}
+
+enum class FollowMetaLinkType {
+    @JsonProperty("true")
+    True,
+
+    @JsonProperty("false")
+    False,
+
+    @JsonProperty("mem")
+    Mem
+}
 
 enum class HelpType {
     @JsonProperty("#advanced")
@@ -1365,7 +2246,7 @@ fun newUriRequest(
     userAgent: String? = null,
     seed: Boolean = false,
     notificationMetaData: NotificationMetaData? = null,
-    stream : Boolean = false,
+    stream: Boolean = false,
 ): UriRequest {
     return UriRequest(
         id = id,
@@ -1377,8 +2258,8 @@ fun newUriRequest(
             dir = directory,
             userAgent = userAgent,
             seedTimeMin = if (seed) null else 0.0f,
-            streamPieceSelector = if(stream) StreamPieceSelector.Inorder else null,
-            btPieceSelector = if(stream) BtPieceSelector.Inorder else null,
+            streamPieceSelector = if (stream) StreamPieceSelector.Inorder else null,
+            btPieceSelector = if (stream) BtPieceSelector.Inorder else null,
         ),
     )
 }
