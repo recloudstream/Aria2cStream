@@ -134,13 +134,13 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     abstract fun resetView()
 
     open fun performDownload(request: UriRequest) {
-        Aria2Starter.client?.download(request) { _ ->
+        Aria2Starter.instance?.client?.download(request) { _ ->
             lastRequest = null
         }
     }
 
     open fun performFailQueueDownload(request: List<UriRequest>) {
-        Aria2Starter.client?.downloadFailQueue(request) { _, _ ->
+        Aria2Starter.instance?.client?.downloadFailQueue(request) { _, _ ->
             lastRequest = null
         }
     }
@@ -148,7 +148,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     fun pauseDownload() {
         setStatus(DownloadStatusTell.Waiting)
         val localGid = gid ?: return
-        Aria2Starter.client?.run {
+        Aria2Starter.instance?.client?.run {
             pause(localGid)
             forceUpdate()
         }
@@ -157,7 +157,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     fun resumeDownload(): Boolean {
         setStatus(DownloadStatusTell.Waiting)
         gid?.let { localGid ->
-            Aria2Starter.client?.run {
+            Aria2Starter.instance?.client?.run {
                 unpause(localGid)
                 forceUpdate()
             }?.also {
@@ -189,7 +189,7 @@ abstract class BaseFetchButton(context: Context, attributeSet: AttributeSet) :
     fun redownload() {
         //val localGid = gid ?: return
         setStatus(DownloadStatusTell.Waiting)
-        Aria2Starter.client?.run {
+        Aria2Starter.instance?.client?.run {
             //remove(localGid)
             download(lastRequest ?: return@run) { }
             forceUpdate()
