@@ -513,7 +513,7 @@ import java.util.regex.Pattern
             params["--enable-color"] = "false"
             params["--enable-rpc"] = "true"
             params["--rpc-secret"] = settings.token
-            params["--rpc-listen-port"] = settings.port.toString()
+            params["--rpc-listen-port"] = settings.availablePort.toString()
             params["--rpc-listen-all"] = "false"
             params["--rpc-allow-origin-all"] = "false"
             //params.put("--rpc-secret", Prefs.getString(Aria2PK.RPC_TOKEN));

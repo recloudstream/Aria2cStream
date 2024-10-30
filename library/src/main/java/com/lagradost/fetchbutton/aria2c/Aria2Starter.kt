@@ -10,18 +10,55 @@ import com.lagradost.fetchbutton.utils.Coroutines.mainThread
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.lang.ref.WeakReference
+import java.net.ServerSocket
+
+/// https://gist.github.com/vorburger/3429822
+fun findPort(): Int? {
+    var socket: ServerSocket? = null
+    try {
+        socket = ServerSocket(0)
+        socket.reuseAddress = true
+        val port = socket.localPort
+        try {
+            socket.close()
+        } catch (_: Throwable) {
+        }
+        return port
+    } catch (_: Throwable) {
+    } finally {
+        if (socket != null) {
+            try {
+                socket.close()
+            } catch (_: Throwable) {
+            }
+        }
+    }
+    return null
+}
+
 
 data class Aria2Settings(
     @JsonProperty("token")
     val token: String,
+    /** if randomizePort is on, it will choose this port as a backup, otherwise it will use this port directly **/
     @JsonProperty("port")
     val port: Int,
     @JsonProperty("dir")
     val dir: String,
     @JsonProperty("sessionDir")
     val sessionDir: String? = null, // null for not save
+    @JsonProperty("randomizePort")
+    val randomizePort: Boolean = true,
     //val checkCertificate : Boolean = false,
-)
+) {
+    val availablePort: Int by lazy {
+        if (randomizePort) {
+            findPort() ?: port
+        } else {
+            port
+        }
+    }
+}
 
 data class Aria2OverrideClientSettings(
     val statusUpdateRateMs: Long = 1000,
@@ -29,82 +66,85 @@ data class Aria2OverrideClientSettings(
     val client: ((AbstractClient.Profile) -> AbstractClient)? = null
 )
 
+data class Aria2Bundle(
+    val client: AbstractClient,
+    val settings: Aria2Settings,
+    val server: Aria2,
+) {
+    fun restartServer(): Boolean {
+        return try {
+            server.delete() and server.start()
+        } catch (t: Throwable) {
+            t.printStackTrace()
+            false
+        }
+    }
+
+    fun restartClient() {
+        client.close()
+        client.connect()
+    }
+
+    fun refresh() {
+        if (!server.isRunning) {
+            restartServer()
+        }
+        if (!client.isRunning) {
+            restartClient()
+        }
+    }
+
+    suspend fun stop() {
+        client.shutdownAsync() // stop by sending the shutdown signal
+        server.delete() // stop it forcefully
+        client.close() // stop the client
+    }
+}
+
 object Aria2Starter {
     const val TAG = "Aria2"
-
-    var client: AbstractClient? = null
-    var aria2: Aria2? = null
+    var instance: Aria2Bundle? = null
 
     // this is used to store keys
     var saveActivity: WeakReference<Activity> = WeakReference(null)
-    //TODO https://developer.android.com/training/data-storage/shared/documents-files
-    /*fun checkPermission(request: UriRequest): Boolean {
-        request.directory?.let { dir ->
-            if (!File(dir).canWrite()) {
-                println("CANT WRITE TO $dir")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    saveActivity.get()?.let { act ->
-                        act.contentResolver
-                        val sm: StorageManager =
-                            act.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-                        val intent = sm.primaryStorageVolume.createOpenDocumentTreeIntent()
-                        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION and Intent.FLAG_GRANT_WRITE_URI_PERMISSION and Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        val uri: Uri =
-                            intent.getParcelableExtra("android.provider.extra.INITIAL_URI") ?: return false
-                        var scheme = uri.toString()
-                        Log.d("TAG", "INITIAL_URI scheme: $scheme")
-                        scheme = scheme.replace("/root/", "/document/")
-                        val finalDirPath = "$scheme%3A$dir"
-                        val furi = Uri.parse(finalDirPath)
-                        intent.putExtra("android.provider.extra.INITIAL_URI", furi)
-                        intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
-                        Log.d("TAG", "uri: $furi")
-                        act.startActivityForResult(intent, 6);
-                    }
-                }
-                return false
-            }
-        }
-        return true
-    }*/
+
+    fun refresh() {
+        instance?.refresh()
+    }
+
+    suspend fun shutdown() {
+        instance?.stop()
+        instance = null
+    }
 
     fun download(request: UriRequest) {
-      //  if (!checkPermission(request)) return
-
-        //
-//
-        //
-        //
-        //
-        //
-        //
-        //
-        //
-        //
-//
-        //
-        client?.download(request) {}
+        instance?.client?.download(request) {}
     }
 
     fun download(request: List<UriRequest>) {
-        //if (request.any { !checkPermission(it) }) return
-
-        client?.downloadFailQueue(request) { _, _ -> }
+        instance?.client?.downloadFailQueue(request) { _, _ -> }
     }
 
     fun download(vararg requests: UriRequest) {
-       // if (requests.any { !checkPermission(it) }) return
-        client?.downloadFailQueue(requests.toList()) { _, _ -> }
+        instance?.client?.downloadFailQueue(requests.toList()) { _, _ -> }
     }
 
     fun pause(gid: String, all: Boolean = true) {
-        client?.run {
+        instance?.client?.run {
             pause(gid, all)
         }
     }
 
+    fun pauseAll() {
+        instance?.client?.pauseAll()
+    }
+
+    fun unpauseAll() {
+        instance?.client?.unpauseAll()
+    }
+
     fun unpause(gid: String, all: Boolean = true) {
-        client?.run {
+        instance?.client?.run {
             unpause(gid, all)
             //forceUpdate()
         }
@@ -146,12 +186,11 @@ object Aria2Starter {
         sessionIdToLastRequest.remove(id)
 
         gid?.let { localGid ->
-
             // remove id from session
             DownloadListener.remove(localGid, id)
 
             // remove aria2
-            client?.run {
+            instance?.client?.run {
                 DownloadListener.failQueueMapMutex.withLock {
                     DownloadListener.failQueueMap.remove(localGid)
                 }
@@ -163,15 +202,21 @@ object Aria2Starter {
         }
     }
 
+
     fun start(
         activity: Activity,
         settings: Aria2Settings,
         clientSettings: Aria2OverrideClientSettings = Aria2OverrideClientSettings()
     ) {
         saveActivity = WeakReference(activity)
-        val parent: File = activity.filesDir
 
-        aria2 = Aria2.get().also { ar ->
+        if (instance != null) {
+            refresh()
+            return
+        }
+
+        val server = Aria2.get().also { ar ->
+            val parent: File = activity.filesDir
             ar.loadEnv(
                 parent,
                 File(activity.applicationInfo.nativeLibraryDir, "libaria2c.so"),
@@ -186,20 +231,23 @@ object Aria2Starter {
             })
 
             ar.start()
-            val profile = AbstractClient.Profile(
-                serverSsl = false,
-                serverAddr = "localhost",
-                serverEndpoint = "/jsonrpc",
-                serverPort = settings.port,
-                timeout = clientSettings.timeout,
-                token = settings.token,
-                statusUpdateRateMs = clientSettings.statusUpdateRateMs,
-            )
-
-            client = clientSettings.client?.invoke(profile) ?: WebsocketClient(profile).apply {
-                connect()
-                initStatusUpdateLoop()
-            }
         }
+
+        val profile = AbstractClient.Profile(
+            serverSsl = false,
+            serverAddr = "localhost",
+            serverEndpoint = "/jsonrpc",
+            serverPort = settings.availablePort,
+            timeout = clientSettings.timeout,
+            token = settings.token,
+            statusUpdateRateMs = clientSettings.statusUpdateRateMs,
+        )
+
+        val client = clientSettings.client?.invoke(profile) ?: WebsocketClient(profile).apply {
+            connect()
+            initStatusUpdateLoop()
+        }
+
+        instance = Aria2Bundle(client = client, server = server, settings = settings)
     }
 }

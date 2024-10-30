@@ -26,6 +26,15 @@ abstract class AbstractClient(
     prebuiltClient: OkHttpClient? = null
 ) {
     @Volatile
+    open var closed = true
+
+    @Volatile
+    open var pending = false
+
+    val isRunning: Boolean
+        get() = pending || !closed
+
+    @Volatile
     private var requestId: Long = 0
 
     data class Profile(
@@ -111,9 +120,13 @@ abstract class AbstractClient(
          * This method returns OK for success.*/
         REMOVE_RESULT("aria2.removeDownloadResult"),
         GET_VERSION("aria2.getVersion"),
+
+        /** This method is equal to calling aria2.pause() for every active/waiting download. This methods returns OK.*/
         PAUSE_ALL("aria2.pauseAll"),
         GET_SESSION_INFO("aria2.getSessionInfo"),
         SAVE_SESSION("aria2.saveSession"),
+
+        /** This method is equal to calling aria2.unpause() for every paused download. This methods returns OK. */
         UNPAUSE_ALL("aria2.unpauseAll"),
         FORCE_PAUSE_ALL("aria2.forcePauseAll"),
         PURGE_DOWNLOAD_RESULTS("aria2.purgeDownloadResult"),
@@ -381,7 +394,7 @@ abstract class AbstractClient(
                 put("header", array)
             }
 
-            for((name, list) in listOf(
+            for ((name, list) in listOf(
                 "bt-exclude-tracker" to data.args.btExcludeTracker,
                 "bt-tracker" to data.args.btTracker,
                 "no-proxy" to data.args.noProxy,
@@ -397,8 +410,8 @@ abstract class AbstractClient(
             // kinda shitty solution, but it is the easiest. skip all _ as those are lists
             val jsonList = parseJson<Map<String, Any>>(data.args.toJson())
             for ((k, v) in jsonList) {
-                if(k.startsWith('_')) continue
-                put(k,v.toString())
+                if (k.startsWith('_')) continue
+                put(k, v.toString())
             }
         }, // options
         Int.MAX_VALUE // position, max to push to the last position within the queue
@@ -469,6 +482,14 @@ abstract class AbstractClient(
         }
     }
 
+    suspend fun shutdownAsync(): Boolean = isOk(sendRaw(createRequest(Method.SHUT_DOWN)))
+
+    fun isOk(result: Result<String>): Boolean = result.getOrNull() == "OK"
+
+    fun shutdown() = scope.launch {
+        shutdownAsync()
+    }
+
     fun unpause(gid: String, all: Boolean = true) = scope.launch {
         unpauseAsync(gid, all)
     }
@@ -480,6 +501,17 @@ abstract class AbstractClient(
         } else {
             sendRaw(createUnPauseRequest(gid))
         }
+    }
+
+    suspend fun pauseAllAsync(): Boolean = isOk(sendRaw(createRequest(Method.PAUSE_ALL)))
+    suspend fun unpauseAllAsync() : Boolean = isOk(sendRaw(createRequest(Method.UNPAUSE_ALL)))
+
+    fun pauseAll() = scope.launch {
+        pauseAllAsync()
+    }
+
+    fun unpauseAll() = scope.launch {
+        unpauseAllAsync()
     }
 
     fun remove(gid: String, all: Boolean = true) = scope.launch {
@@ -508,55 +540,6 @@ abstract class AbstractClient(
             sendRaw(createRemoveRequest(gid))
         }
     }
-
-    /*fun deleteAllFiles(id: Long) {
-        removeGid(sessionIdToGid[id])
-        removeId(id)
-    }
-
-    fun deleteAllFiles(gid: String): Boolean {
-        removeId(sessionGidToId[gid])
-        removeGid(gid)
-        return true
-    }
-
-    fun deleteFiles(files: List<JsonFile>) {
-        files.map { file -> file.path }.forEach { path ->
-            try {
-                File(path).delete()
-                File("$path.aria2").delete()
-            } catch (_: Throwable) {
-            }
-        }
-    }
-
-    fun removeGid(gid: String?) {
-        if (gid == null) return
-        val files = getInfo(gid)
-        deleteFiles(files.map { it.files }.flatten())
-        // remove aria2
-        run {
-            DownloadListener.failQueueMapMutex.withLock {
-                DownloadListener.failQueueMap.remove(gid)
-            }
-
-            DownloadListener.currentDownloadStatus.remove(gid)
-
-            remove(gid)
-        }
-
-        // remove id from session
-        DownloadListener.remove(gid, null)
-    }
-
-    fun removeId(pid: Long?) {
-        // delete files
-        DownloadListener.sessionIdToLastRequest.remove(pid ?: return)
-
-        // remove id from session
-        DownloadListener.remove(null, pid)
-    }*/
-
 
     private fun buildRequest(req: AriaRequest): JSONObject {
         val request = JSONObject()
@@ -600,6 +583,7 @@ abstract class AbstractClient(
     }
 
     abstract fun connect()
+    abstract fun close()
 
     fun downloadFailQueue(requests: List<UriRequest>, callback: (String, Int) -> Unit) {
         scope.launch {

@@ -17,13 +17,17 @@ class WebsocketClient(profile: Profile) : AbstractClient(profile) {
         const val TAG = "WebSocClient"
     }
 
-    @Volatile
-    private var closed = false
     private var socket: WebSocket? = null
 
-    fun close() {
+    override fun close() {
         closed = true
-        socket?.close(0, "Terminated by user")
+        try {
+            socket?.close(0, "Terminated by user")
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        } finally {
+            socket = null
+        }
     }
 
     private val pendingMutex = Mutex()
@@ -31,6 +35,7 @@ class WebsocketClient(profile: Profile) : AbstractClient(profile) {
         hashMapOf() // TODO CLEAN THIS UP WHEN NO PENDING REQUESTS
 
     override fun connect() {
+        pending = true
         val url =
             "${if (profile.serverSsl) "wss" else "ws"}://${profile.serverAddr}:${profile.serverPort}${profile.serverEndpoint}"
         Log.i(TAG, "connect = $url")
@@ -39,13 +44,13 @@ class WebsocketClient(profile: Profile) : AbstractClient(profile) {
         val listener = object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 closed = false
+                pending = false
                 Log.i(TAG, "onOpen")
                 super.onOpen(webSocket, response)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 closed = true
-
                 Log.i(TAG, "onClosed code = $code reason = $reason")
                 super.onClosed(webSocket, code, reason)
             }
@@ -93,7 +98,7 @@ class WebsocketClient(profile: Profile) : AbstractClient(profile) {
 
     override suspend fun send(id: String, req: JSONObject): Result<String> {
         try {
-            if(BuildConfig.DEBUG) {
+            if (BuildConfig.DEBUG) {
                 Log.v(TAG, "Send: $req")
             }
 
