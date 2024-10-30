@@ -51,21 +51,25 @@ class WebsocketClient(profile: Profile) : AbstractClient(profile) {
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 closed = true
+                pending = false
                 Log.i(TAG, "onClosed code = $code reason = $reason")
                 super.onClosed(webSocket, code, reason)
             }
 
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                pending = false
                 Log.i(TAG, "onClosing code = $code reason = $reason")
                 super.onClosing(webSocket, code, reason)
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                pending = false
                 Log.i(TAG, "onFailure t = $t")
                 super.onFailure(webSocket, t, response)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
+                pending = false
                 scope.launch {
                     tryParseJson<SmallJsonResponse>(text)?.let { jsonResponse ->
                         pendingMutex.withLock {
